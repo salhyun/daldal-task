@@ -1,0 +1,199 @@
+<style>
+  body {
+    background-color:floralwhite;
+    width: 100%;
+    margin: auto
+  }
+</style>
+
+<script type="text/javascript" src="https://static.nid.naver.com/js/naveridlogin_js_sdk_2.0.0.js" charset="utf-8"></script>
+<script>
+    SNSAccount = {kind: '', token: '', email: '', nickname: '', avatar: ''};
+    $(document).ready(function() {
+        $('.content').css('margin-top', $('.navbar')[0].clientHeight + 100);
+
+        let requestUrl = '<%= request.url %>';
+        console.log('requestUrl =', requestUrl);
+
+        $('#modal-mergeAccount').on('show.bs.modal', function (event) {
+            let body = $(this).find('.modal-body');
+            body.empty();
+
+            let mergeWithAccount = '';
+            if(SNSAccount.kind === 'google')
+                mergeWithAccount = '<%= t('user.want_to_merge_with_this_account', brandName: t('google')) %>';
+            else if(SNSAccount.kind === 'kakao')
+                mergeWithAccount = '<%= t('user.want_to_merge_with_this_account', brandName: t('kakao')) %>';
+            else if(SNSAccount.kind === 'naver')
+                mergeWithAccount = '<%= t('user.want_to_merge_with_this_account', brandName: t('naver')) %>';
+            body.append("<p><%= t('user.this_account_already_exists') %>('"+ SNSAccount.email + "')<br>" + mergeWithAccount + "</p>")
+        });
+    });
+
+    function refreshWelcome() {
+        $('#form-content').empty();
+        $('#form-content').css('display', 'flex');
+        $('#form-content').css('justify-content', 'center');
+        $('#form-content').css('height', '200px');
+        var sucess = $("<div style='align-self: center; text-align: center; font-size: 1.5rem;'><%= t('user.successfully_joined') %><br><%= t('user.signin_after_verified') %></div>");
+        $('#form-content').append(sucess);
+    }
+    function firebaseSignup(account, callback) {
+        firebase.auth().createUserWithEmailAndPassword(account, '<%= ENV['firebase_public_password'] %>').then(auth => {
+            console.log('회원가입 성공!');
+            console.log('firebase uid =', auth.user.uid);
+            callback();
+        }).catch(error => {
+            console.log('파이어 베이스 회원가입 살패!');
+            console.log('파이어 베이스 error = ', error);
+        });
+    }
+    function firebaseSignin(account, callback) {
+        firebase.auth().signInWithEmailAndPassword(account, '<%= ENV['firebase_public_password'] %>').then(auth => {
+            console.log('login successfully uid = ', auth.user.uid);
+            callback();
+        }).catch(error => {
+            console.error('signInWithEmailAndPassword error =', error);
+        })
+    }
+    function confirmSignupWithSNS(kind, token, email, nickname, avatar) {
+        jQuery.ajax({
+            url: '/user/createWithSNS',
+            type: 'post',
+            data: {
+                kind: kind,
+                token: token,
+                email: email,
+                nickname: nickname,
+                avatar: avatar
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    if(data.how === 'new') {
+                        firebaseSignup(email, refreshWelcome);
+                    } else if(data.how === 'merge') {
+                        window.location.href = '/dashboard/dashboard';
+                    } else if(data.how === 'existed') {
+                        window.location.href = '/dashboard/dashboard';
+                    }
+                } else {
+                    console.log('회원가입 실패!');
+                    console.log(data.message)
+                }
+            },
+            error: function() {
+                console.log("error in ajax create");
+            }
+        });
+    }
+    function mergeAccount() {
+        confirmSignupWithSNS(SNSAccount.kind, SNSAccount.token, SNSAccount.email, SNSAccount.nickname, SNSAccount.avatar);
+    }
+    function checkSNSAccount() {
+        jQuery.ajax({
+            url: '/user/checkAccount',
+            type: 'post',
+            data: {
+                account: SNSAccount.email,
+                kind: SNSAccount.kind,
+                token: SNSAccount.token
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    if(data.exist.length == 1) {
+                        if(data.exist[0] == 'email') {
+                            console.log('이메일 계정만 있음');
+                            $('#modal-mergeAccount').modal('show');
+                            // firebaseSignin(SNSAccount.email, refreshWelcome);
+                        }
+                    } else if(data.exist.length == 2) {//이미 가입한 유저
+                        alert('<%= t('user.this_account_already_exists') %>');
+                    }
+                } else {//신규 가입
+                    confirmSignupWithSNS(SNSAccount.kind, SNSAccount.token, SNSAccount.email, SNSAccount.nickname, SNSAccount.avatar);
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+
+    var naverLogin = new naver.LoginWithNaverId({clientId: "<%= ENV['naver_client_id'] %>"});
+    naverLogin.init();
+    naverLogin.getLoginStatus(function (status) {
+        if (status) {
+            // var email = naverLogin.user.getEmail();
+            // var name = naverLogin.user.getNickName();
+            // var profileImage = naverLogin.user.getProfileImage();
+            // var birthday = naverLogin.user.getBirthday();			var uniqId = naverLogin.user.getId();
+            // var age = naverLogin.user.getAge();
+            // $('#emailId').val(email);
+            SNSAccount.kind = 'naver';
+            SNSAccount.token = naverLogin.user.getId();
+            SNSAccount.nickname = naverLogin.user.getNickName();
+            SNSAccount.avatar = naverLogin.user.getProfileImage();
+        } else {
+            console.log("AccessToken이 올바르지 않습니다.");
+        }
+    });
+    function submitEmail() {
+        SNSAccount.email = $('#emailId').val();
+        console.log('SNSAccount =', SNSAccount);
+        checkSNSAccount();
+
+        // jQuery.ajax({
+        //     url: '/user/confirmSNSEmail',
+        //     type: 'post',
+        //     data: {
+        //         kind: 'naver',
+        //         email: email
+        //     },
+        //     success: function(data) {
+        //         console.log(data);
+        //         if(data.result == true) {
+        //
+        //         } else {
+        //             console.log('회원가입 실패!');
+        //             console.log(data.message)
+        //         }
+        //     },
+        //     error: function() {
+        //         console.log("error in ajax create");
+        //     }
+        // });
+    }
+
+</script>
+
+<div class="content">
+  <div class="shadow-sm p-3 mb-5 bg-white rounded" style="width:45%; max-width: 500px; height:auto; text-align: center; margin: auto">
+    <div id="form-content" style="width: auto; margin: auto; text-align: left;">
+      <form>
+        <h3><%= t('application.email_to_use_as_account') %></h3>
+        <div class="form-group">
+          <label style="display: block;" for="emailId" class="col-form-label"><%= t('application.email') %></label>
+          <input type="email" class="form-control" id="emailId" placeholder="<%= t('application.input_your_email') %>">
+        </div>
+      </form>
+      <button type="button" class="btn btn-warning" style="width: 100%; margin-top: 20px" onclick="submitEmail()"><%= t('application.submit') %></button>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="modal-mergeAccount" tabindex="-1" role="dialog" aria-labelledby="mergeAccount-Label" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><%= t('user.merge_account') %></h5>
+      </div>
+      <div class="modal-body">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.cancel') %></button>
+        <button type="button" class="btn btn-warning" onclick="mergeAccount()"><%= t('application.apply') %></button>
+      </div>
+    </div>
+  </div>
+</div>

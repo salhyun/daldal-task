@@ -1,0 +1,206 @@
+<style>
+  body {
+    background-color:floralwhite;
+    width: 100%;
+    margin: auto;
+    overflow: hidden;
+  }
+  .table td {
+    text-align: center;
+  }
+  .table th {
+    text-align: center;
+  }
+</style>
+
+<script>
+    sortAttributes = {item: 'underway', kind: 'ascending'};
+    tableRows = new Array();
+    compareTableRows = function(a, b) {
+        console.log('sort function');
+        if(sortAttributes.item == '<%= t('tableView.underway') %>') {
+            if(sortAttributes.kind == 'ascending') {//오름차순 작은것 -> 큰것 fa-chevron-up
+                return a.underwayTasks.length - b.underwayTasks.length;
+            } else if(sortAttributes.kind == 'descending') {//내림차순 큰것 -> 작은것 fa-chevron-down
+                return b.underwayTasks.length - a.underwayTasks.length;
+            }
+        } else if(sortAttributes.item == '<%= t('application.completed') %>') {
+            if(sortAttributes.kind == 'ascending') {
+                return a.completedTasks.length - b.completedTasks.length;
+            } else if(sortAttributes.kind == 'descending') {
+                return b.completedTasks.length - a.completedTasks.length;
+            }
+        } else if(sortAttributes.item == '<%= t('tableView.total') %>') {
+            if(sortAttributes.kind == 'ascending') {
+                return (a.underwayTasks.length+a.completedTasks.length) - (b.underwayTasks.length+b.completedTasks.length);
+            } else if(sortAttributes.kind == 'descending') {
+                return (b.underwayTasks.length+b.completedTasks.length) - (a.underwayTasks.length+a.completedTasks.length);
+            }
+        } else if(sortAttributes.item == '<%= t('tableView.percentage') %>') {
+            if(sortAttributes.kind == 'ascending') {
+                let total = a.underwayTasks.length+a.completedTasks.length;
+                let ratioA = 0;
+                if(total > 0) {
+                    ratioA = a.completedTasks.length/total;
+                }
+                total = b.underwayTasks.length+b.completedTasks.length;
+                let ratioB = 0;
+                if(total > 0) {
+                    ratioB = b.completedTasks.length/total;
+                }
+                return ratioA - ratioB;
+            } else if(sortAttributes.kind == 'descending') {
+                let total = a.underwayTasks.length+a.completedTasks.length;
+                let ratioA = 0;
+                if(total > 0) {
+                    ratioA = a.completedTasks.length/total;
+                }
+                total = b.underwayTasks.length+b.completedTasks.length;
+                let ratioB = 0;
+                if(total > 0) {
+                    ratioB = b.completedTasks.length/total;
+                }
+                return ratioB - ratioA;
+            }
+        }
+    };
+
+    $(document).ready(function() {
+        $('.content').css('margin-top', $('.navbar')[0].clientHeight);
+
+        fitClientHeight($('.content').children('div').first());
+
+        $('#member-table').find('tbody').empty();
+        <% @members.each do |member| %>
+        console.log('member nickName =', '<%= member.name %>');
+        readMemberTasks(<%= member.id %>);
+        <% end %>
+
+        $( window ).resize( function() {
+            fitClientHeight($('.content').children('div').first());
+        });
+
+    });//$(document).ready
+
+    function readMemberTasks(userId) {
+        jQuery.ajax({
+            url: '/tableview/readMemberTasks',
+            type: 'post',
+            data: {
+                userId: userId,
+                projectId: <%= @project.id %>
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    tableRows.push({user: data.user, underwayTasks: data.underwayTasks, completedTasks: data.completedTasks});
+                    console.log('tableRows =', tableRows[tableRows.length-1]);
+                    addTableRow($('#member-table').find('tbody'), data.user, data.underwayTasks, data.completedTasks);
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function addTableRow(tbody, user, underwayTasks, completedTasks) {
+        let tr = $('<tr id="user-' + user.id + '"></tr>');
+        tr.append('<th scope="row">' + user.name +'</th>');
+        addTasksTd(tr, underwayTasks, 'btn-warning');
+        addTasksTd(tr, completedTasks, 'btn-secondary');
+        let val = underwayTasks.length + completedTasks.length;
+        tr.append('<td>' + val + '</td>');
+        if(val > 0) {
+            val = completedTasks.length/val*100;
+            tr.append('<td>' + val + '%</td>');
+        } else {
+            tr.append('<td>0%</td>');
+        }
+        tbody.append(tr);
+    }
+    function addTasksTd(tr, tasks, buttonKind) {
+        if(tasks.length > 0) {
+            let td = $('<td></td>');
+            let divContent = $('<div style="display: flex; justify-content: center; align-items: center"></div>');
+            divContent.append('<div class="dropdown">');
+            divContent.append('<button class="btn ' + buttonKind + ' btn-sm dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' + tasks.length + ' tasks' + '</button>');
+            let dropdownMenu = $('<div class="dropdown-menu" aria-labelledby="dropdownMenuButton">');
+            tasks.forEach(task => {
+                dropdownMenu.append('<a class="dropdown-item" data-toggle="modal" data-kind="open-task" data-taskid="' + task.id + '" data-target="#modal-viewTask" style="cursor: pointer">' + task.title + '</a>');
+            })
+            divContent.append(dropdownMenu);
+            td.append(divContent);
+            tr.append(td);
+        } else {
+            tr.append('<td>0</td>');
+        }
+    }
+    function onClickTableSort(obj) {
+        console.log(`columnName = ${$(obj).parent().text()}, kindName = ${$(obj).attr('class')}`);
+        let tr = $(obj).parent().parent();
+
+        sortAttributes.item = $(obj).parent().text();
+        let className = $(obj).attr('class');
+        if(className.indexOf('-down') != -1) {
+            className = className.replace(/-down/g , '-up');
+            sortAttributes.kind = 'ascending';
+        } else {
+            className = className.replace(/-up/g , '-down');
+            sortAttributes.kind = 'descending';
+        }
+        $(obj).attr('class', className);
+        $(obj).css('color', 'dimgray');
+
+        if(typeof previousItem !== 'undefined') {
+            if(previousItem.parent().text() !== sortAttributes.item)
+                previousItem.css('color', 'silver');
+        }
+        previousItem = $(obj);
+        tableRows.sort(compareTableRows);
+        console.log('tableRows =', tableRows);
+
+        $('#member-table').find('tbody').empty();
+        tableRows.forEach(tableRow => {
+            addTableRow($('#member-table').find('tbody'), tableRow.user, tableRow.underwayTasks, tableRow.completedTasks);
+        })
+    }
+</script>
+
+<div class="content">
+  <div class="rounded" style="padding: 1rem; background-color: floralwhite; overflow: auto">
+    <div style="max-width: 700px; min-width: 500px; max-height: 100%; margin: auto; overflow: auto">
+      <h3 style="text-align: center; margin-top: 2rem;">맴버별 태스크 진행 현황</h3>
+      <table id="member-table" class="table table-bordered">
+        <thead>
+        <tr>
+          <th scope="col"><%= t('application.members') %></th>
+          <th scope="col"><%= t('tableView.underway') %><i class="fas fa-chevron-down" style="padding-left: 0.25rem; cursor: pointer; color: silver" onclick="onClickTableSort(this)"></i></th>
+          <th scope="col"><%= t('application.completed') %><i class="fas fa-chevron-down" style="padding-left: 0.25rem; cursor: pointer; color: silver" onclick="onClickTableSort(this)"></i></th>
+          <th scope="col"><%= t('tableView.total') %><i class="fas fa-chevron-down" style="padding-left: 0.25rem; cursor: pointer; color: silver" onclick="onClickTableSort(this)"></i></th>
+          <th scope="col"><%= t('tableView.percentage') %><i class="fas fa-chevron-down" style="padding-left: 0.25rem; cursor: pointer; color: silver" onclick="onClickTableSort(this)"></i></th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <th scope="row">1</th>
+          <td>Mark</td>
+          <td>Otto</td>
+          <td>@mdo</td>
+        </tr>
+        <tr>
+          <th scope="row">2</th>
+          <td>Jacob</td>
+          <td>Thornton</td>
+          <td>@fat</td>
+        </tr>
+        <tr>
+          <th scope="row">3</th>
+          <td colspan="2">Larry the Bird</td>
+          <td>@twitter</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

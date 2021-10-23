@@ -1,0 +1,29 @@
+# Read about fixtures at http://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+# This model initially had no columns defined. If you add columns to the
+# model remove the '{}' from the fixture names and add the columns immediately
+# below each fixture, per the syntax in the comments below
+#
+admin:
+  id: 1
+  name: administrator
+  name_kr: 관리자
+  desc: 프로젝트 모든 권한을 가지고 있음.
+
+manager:
+  id: 2
+  name: manager
+  name_kr: 매니저
+  desc: 작업할당 권한을 가지고 있음.
+
+worker:
+  id: 3
+  name: worker
+  name_kr: 작업자
+  desc: 업무를 하는 사람.
+
+commenter:
+  id: 4
+  name: commenter
+  name_kr: 주석자
+  desc: 주석,해설등을 할 수 있음.

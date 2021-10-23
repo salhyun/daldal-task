@@ -1,0 +1,9 @@
+<p>
+  <%= @owner.name %>님이 당신을 daldalTask로 초대하였습니다.
+</p>
+<p><br></p>
+<p><%= @message %></p>
+<p><br></p>
+<p style="color: #DC3410; font-weight: bold">반드시 받으신 이메일 주소로 가입하시기 바랍니다.<br>다른 메일을 사용할 경우 초대절차가 정상적으로 처리되지 않습니다.</p>
+<p><br></p>
+<a href="http://<%= ENV['host_ip'] %>/user/new">회원가입 하기</a>

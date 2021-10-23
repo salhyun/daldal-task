@@ -1,0 +1,2 @@
+class Roletype < ApplicationRecord
+end

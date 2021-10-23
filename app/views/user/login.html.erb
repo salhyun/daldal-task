@@ -1,0 +1,332 @@
+<style>
+  body {
+    background-color:floralwhite;
+    width: 100%;
+    margin: auto
+  }
+</style>
+<meta name="google-signin-scope" content="profile email">
+<meta name="google-signin-client_id" content="<%= ENV['google_client_id'] %>">
+<script src="https://apis.google.com/js/platform.js" async defer></script>
+<!--<script src="https://apis.google.com/js/platform.js?onload=renderButton" async defer></script>-->
+<script src="//developers.kakao.com/sdk/js/kakao.min.js"></script>
+<script type="text/javascript" src="https://static.nid.naver.com/js/naveridlogin_js_sdk_2.0.0.js" charset="utf-8"></script>
+
+<script>
+    $(document).ready(function() {
+        $('.content').css('margin-top', $('.navbar')[0].clientHeight + 100);
+
+        $('#emailId').on('change keyup paste', function () {
+            let small = $(this).next('small');
+            if(small.length > 0) {
+                small.remove();
+            }
+        });
+        $('#password').on('change keyup paste', function () {
+            let small = $(this).next('small');
+            if(small.length > 0) {
+                small.remove();
+            }
+        });
+        $('#password').keyup(function (event) {
+            if(event.keyCode == 13) {
+                $('#btn-login').trigger('click');
+            }
+        });
+
+        $('#modal-findPassword').on('show.bs.modal', function (event) {
+            let modalBody = $(this).find('.modal-body');
+            modalBody.empty();
+            let form = $("<form></form>");
+            let div = $("<div class=\"form-group\" style=\"margin-bottom: 5px\">");
+            div.append("<input style=\"width: 75%; vertical-align:bottom; display: inline-block\" type=\"text\" class=\"form-control\" id=\"email\" placeholder=\"<%= t('user.input_email_account_signed_up') %>\">");
+            div.append("<small id=\"email-confirm-msg\" style=\"display: none; color: red\"><%= t('user.please_confirm_email') %></small>");
+            form.append(div);
+            modalBody.append(form);
+
+            let modalFooter = $(this).find('.modal-footer');
+            modalFooter.empty();
+            modalFooter.append("<button type=\"button\" class=\"btn btn-secondary\" data-dismiss=\"modal\"><%= t('application.cancel') %></button>");
+            modalFooter.append("<button type=\"button\" class=\"btn btn-warning\" onclick=\"confirmFindPassword(this)\"><%= t('application.confirm') %></button>");
+        });
+    });
+
+    function firebaseSignin(account, callback) {
+        firebase.auth().signInWithEmailAndPassword(account, '<%= ENV['firebase_public_password'] %>').then(auth => {
+            console.log('login successfully uid = ', auth.user.uid);
+            callback();
+        }).catch(error => {
+            console.error('signInWithEmailAndPassword error =', error);
+        })
+    }
+
+    function confirmLogin(obj) {
+        let account = $('#emailId').val();
+        let password = $('#password').val();
+
+        if(account.length > 0 && password.length > 0) {
+            $(obj).attr('disabled', true);
+            $(obj).text(' ' + $(obj).text());
+            $(obj).prepend('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            $(obj).next().attr('disabled', true);
+            jQuery.ajax({
+                url: '/user/login',
+                type: 'post',
+                data: {
+                    account: account,
+                    password: password
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        firebaseSignin(data.account, () => {
+                            window.location.href = '/dashboard/dashboard';
+                        });
+                    } else {
+                        $(obj).children('span').remove();
+                        $(obj).attr('disabled', false);
+                        $(obj).next().attr('disabled', false);
+                        alert(data.message);
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        } else {
+            if(account.length <= 0) {
+                if($('#emailId').parent().children('small').length <= 0) {
+                    $('#emailId').after("<small style=\"display: block; color: red\"><%= t('application.input_your_email') %></small>");
+                }
+            } else if(password.length <= 0) {
+                if($('#password').parent().children('small').length <= 0) {
+                    $('#password').after("<small style=\"display: block; color: red\"><%= t('application.input_your_password') %></small>");
+                }
+            }
+        }
+    }
+    function confirmLoginWithSNS(kind, email, token) {
+        jQuery.ajax({
+            url: '/user/loginWithSNS',
+            type: 'post',
+            data: {
+                kind: kind,
+                token: token
+            },
+            success: function(data) {
+                console.log('confirmLoginWithSNS = ', data);
+                if(data.result == true) {
+                    firebaseSignin(email, () => {window.location.href = '/dashboard/dashboard'});
+                } else {
+                    alert(data.message);
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function confirmFindPassword(obj) {
+        let email = $('#email').val();
+        if(email.indexOf('@') != -1) {
+            $(obj).attr('disabled', true);
+            $(obj).text(' ' + $(obj).text());
+            $(obj).prepend('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            $(obj).prev().attr('disabled', true);
+            jQuery.ajax({
+                url: '/user/checkEmail',
+                type: 'post',
+                data: {
+                    email: email,
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        let modalBody = $('#modal-findPassword').find('.modal-body');
+                        modalBody.empty();
+                        modalBody.append('<p><%= t('user.password_reset_email_sent') %><br><%= t('user.please_confirm_email') %></p>');
+                        let modalFooter = $('#modal-findPassword').find('.modal-footer');
+                        modalFooter.empty();
+                        modalFooter.append("<button type=\"button\" class=\"btn btn-warning\" data-dismiss=\"modal\"><%= t('application.confirm') %></button>");
+                    } else {
+                        $('#email-confirm-msg').text('<%= t('user.account_does_not_exist') %>');
+                        $('#email-confirm-msg').css('display', 'block');
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        } else {
+            $('#email-confirm-msg').text('<%= t('user.not_valid_email_format') %>');
+            $('#email-confirm-msg').css('display', 'block');
+        }
+    }
+</script>
+
+<div class="content">
+  <div class="shadow-sm p-3 mb-5 bg-white rounded" style="width:95%; max-width: 500px; height:auto; text-align: center; margin: auto">
+    <div style="width: auto; margin: auto; text-align: left;">
+      <form>
+        <h3>로그인</h3>
+        <div class="form-group">
+          <label style="display: block;" for="emailId" class="col-form-label"><%= t('application.email') %></label>
+          <input type="email" class="form-control" id="emailId" placeholder="<%= t('application.input_your_email') %>">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 1px">
+          <label for="password" class="col-form-label"><%= t('application.password') %></label>
+          <input type="password" class="form-control" id="password" placeholder="<%= t('application.input_your_password') %>"></input>
+        </div>
+      </form>
+
+      <button id="btn-login" type="button" class="btn btn-warning" style="width: 100%; margin-top: 20px" onclick="confirmLogin(this)"><%= t('navbar.signin') %></button>
+      <button type="button" class="btn btn-secondary" style="width: 100%; margin: auto; margin-top: 5px" onclick="javascript:history.back()"><%= t('application.cancel') %></button>
+      <div style="text-align: right">
+        <a href="javascript:void(0)" data-toggle="modal" data-target="#modal-findPassword"><%= t('user.find_password') %></a>
+      </div>
+
+      <div id="sns-signin-area" style="display: flex; flex-direction: column; align-items: center; margin-top: 50px;">
+        <div style="margin-top: 10px">
+          <div class="g-signin2" style="width: 240px; height: 50px;" data-onsuccess="onGoogleSignIn" data-longtitle="true" data-theme="dark"></div>
+        </div>
+        <div style="margin-top: 10px">
+          <a id="custom-login-btn" href="javascript:loginWithKakao()">
+            <img src="//mud-kage.kakao.com/14/dn/btqbjxsO6vP/KPiGpdnsubSq3a0PHEGUK1/o.jpg" width="238"/>
+          </a>
+        </div>
+        <div style="margin-top: 10px;">
+          <div id="naverIdLogin"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="modal-findPassword" tabindex="-1" role="dialog" aria-labelledby="findPassword-Label" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmModal-Label"><%= t('user.find_password') %></h5>
+      </div>
+      <div class="modal-body">
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+    //Google Loign
+    // function onSuccess(googleUser) {
+    //     let profile = googleUser.getBasicProfile();
+    //     console.log('Logged in as: ' + profile.getName());
+    //     console.log('idToken =', googleUser.getAuthResponse().id_token);
+    //
+    //     jQuery.ajax({
+    //         url: '/user/decodeJWT',
+    //         type: 'post',
+    //         data: {
+    //             token: googleUser.getAuthResponse().id_token
+    //         },
+    //         success: function(data) {
+    //             console.log(data);
+    //             if(data.result == true) {
+    //                 console.log(data.decoded_token[0].sub);
+    //                 confirmLoginWithSNS('google', profile.getEmail(), data.decoded_token[0].sub);
+    //             } else {
+    //             }
+    //         },
+    //         error: function(request, status, error) {
+    //             console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+    //         }
+    //     });
+    //
+    //     // confirmLoginWithSNS('google', googleUser.getAuthResponse().id_token);
+    //     googleSignOut();
+    // }
+    // function onFailure(error) {
+    //     console.log(error);
+    // }
+    // function renderButton() {
+    //     if(typeof googlePlatformOnLoad === 'undefined') {
+    //         googlePlatformOnLoad = true;
+    //         console.log('called google renderButton');
+    //         $('#sns-signin-area').prepend('<div id="my-signin2"></div>');
+    //         gapi.signin2.render('my-signin2', {
+    //             'scope': 'profile email',
+    //             'width': 240,
+    //             'height': 50,
+    //             'longtitle': true,
+    //             'theme': 'dark',
+    //             'onsuccess': onSuccess,
+    //             'onfailure': onFailure
+    //         });
+    //     } else {
+    //         console.log('googlePlatformOnLoad is already defined');
+    //     }
+    // }
+    function onGoogleSignIn(googleUser) {
+        let profile = googleUser.getBasicProfile();
+        console.log('Logged in as: ' + profile.getName());
+        console.log('idToken =', googleUser.getAuthResponse().id_token);
+
+        jQuery.ajax({
+            url: '/user/decodeJWT',
+            type: 'post',
+            data: {
+                token: googleUser.getAuthResponse().id_token
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    console.log(data.decoded_token[0].sub);
+                    confirmLoginWithSNS('google', profile.getEmail(), data.decoded_token[0].sub);
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+
+        // confirmLoginWithSNS('google', googleUser.getAuthResponse().id_token);
+        googleSignOut();
+    }
+    function googleSignOut() {
+        var auth2 = gapi.auth2.getAuthInstance();
+        auth2.signOut().then(function () {
+            console.log('User signed out.');
+        });
+    }
+
+    //Kakao Login
+    Kakao.init('<%= ENV['kakao_app_key'] %>');
+    function loginWithKakao() {
+        // 로그인 창을 띄웁니다.
+        Kakao.Auth.login({
+            success: function(authObj) {
+                Kakao.API.request({
+                    url: '/v2/user/me',
+                    success: function(res) {
+                        console.log(res);
+                        confirmLoginWithSNS('kakao', res.kakao_account.email, res.id);
+                    },
+                    fail: function(error) {
+                        alert(JSON.stringify(error));
+                    }
+                });
+            },
+            fail: function(err) {
+                alert(JSON.stringify(err));
+            }
+        });
+    };
+    var naverLogin = new naver.LoginWithNaverId({
+        clientId: "<%= ENV['naver_client_id'] %>",
+        callbackUrl: "http://<%= ENV['host_ip'] %>/user/oauthRedirect",
+        callbackHandle: true,
+        loginButton: {color: "green", type: 3, height: 50}
+    });
+    naverLogin.init();
+</script>

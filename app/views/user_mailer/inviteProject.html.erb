@@ -1,0 +1,7 @@
+<p>
+  <%= @owner.name %>님이 당신을 초대하였습니다.
+</p>
+<p><br></p>
+<p><%= @message %></p>
+<p><br></p>
+<a href="http://<%= ENV['host_ip'] %>/user/acceptInvitation?email=<%= @email %>&ownerId=<%= @owner.id %>&projectId=<%= @project.id %>">수락하기</a>

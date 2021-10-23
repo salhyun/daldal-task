@@ -1,0 +1,3676 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link href="https://fonts.googleapis.com/css?family=Nanum+Gothic" rel="stylesheet">
+    <title><%= t('sweet') %></title>
+
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag    'application', media: 'all', 'data-turbolinks-track': 'reload' %>
+    <%= javascript_include_tag 'application', 'data-turbolinks-track': 'reload' %>
+
+    <script type="text/javascript" src="<%= asset_path 'core.min.js' %>"></script>
+    <script type="text/javascript" src="<%= asset_path 'sha256.min.js' %>"></script>
+    <script type="text/javascript" src="<%= asset_path 'myUtil.js' %>"></script>
+    <script type="text/javascript" src="<%= asset_path 'firebaseConfig.js' %>"></script>
+
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-app.js"></script>
+
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/6.2.0/firebase-storage.js"></script>
+
+    <%# if @request_url == 'dashboard' and @request_ctl == 'dashboard' %>
+    <link href="<%= asset_path 'amsify.suggestags.css' %>" rel="stylesheet">
+    <link href="<%= asset_path 'inputRange.css' %>" rel="stylesheet">
+    <script type="text/javascript" src="<%= asset_path 'jquery.amsify.suggestags.js' %>"></script>
+    <%# end %>
+
+    <% if @request_url == 'calendarView' %>
+    <link href='https://use.fontawesome.com/releases/v5.0.6/css/all.css' rel='stylesheet'>
+    <script type="text/javascript" src="<%= asset_path 'fullCalendar/core/main.min.js' %>"></script>
+    <script type="text/javascript" src="<%= asset_path 'fullCalendar/daygrid/main.min.js' %>"></script>
+    <script type="text/javascript" src="<%= asset_path 'fullCalendar/interaction/main.min.js' %>"></script>
+    <script type="text/javascript" src="<%= asset_path 'fullCalendar/timegrid/main.min.js' %>"></script>
+    <link href="<%= asset_path 'fullCalendar/core/main.min.css' %>" rel="stylesheet">
+    <link href="<%= asset_path 'fullCalendar/daygrid/main.min.css' %>" rel="stylesheet">
+    <link href="<%= asset_path 'fullCalendar/timegrid/main.min.css' %>" rel="stylesheet">
+    <script type="text/javascript" src="<%= asset_path 'fullCalendar/core/locales-all.js' %>"></script>
+    <% end %>
+
+    <% if @request_url == 'dashboard' or @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+      <script type="text/javascript" src="<%= asset_path 'jszip/jszip.min.js' %>"></script>
+    <% end %>
+
+  </head>
+
+  <style>
+    body {
+      font-family: "Nanum Gothic";/*기본폰트는 나눔고딕*/
+    }
+
+    .amsify-suggestags-input-area .amsify-select-tag.col-bg {
+      background-color: #ffc107;
+      color: #585858;
+    }
+    .amsify-suggestags-area
+    .amsify-suggestags-list
+    ul.amsify-list {
+      padding: 5px;
+    }
+    .amsify-suggestags-area
+    .amsify-suggestags-list
+    ul.amsify-list
+    li.active {
+      background: #d9d8d8;
+      border-radius: 0.2rem;
+    }
+    .amsify-suggestags-area
+    .amsify-suggestags-list
+    ul.amsify-list
+    li.amsify-item-pad.active {
+      font-weight: normal;
+    }
+
+    .roleList-item {
+      cursor: pointer;
+      color: dimgray;
+      padding: 0.3rem;
+      border-radius: 0.25rem;
+      transition: all 0.1s ease-in-out;
+    }
+
+    .display-none {
+      display: none;
+    }
+    .task {
+      cursor: pointer;
+      flex-basis: 100px;
+      background-color: ghostwhite;
+      margin: 5px;
+      border-radius: 0.4rem;
+      /*border: 1px solid transparent;*/
+      /*transition: all 10ms ease-in-out;*/
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+      transition: box-shadow 0.45s cubic-bezier(.25,.8,.25,1);
+      <% if @mobileDevice %>
+      min-width: 16rem;
+      <% else %>
+      min-width: 15rem;
+      <% end %>
+    }
+    <% unless @mobileDevice %>
+    .task:hover {
+      /*box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);*/
+      /*box-shadow: 0 10px 28px rgba(0,0,0,0.25), 0 7px 10px rgba(0,0,0,0.22);*/
+      box-shadow: 0 10px 12px rgba(0,0,0,0.25), 0 7px 10px rgba(0,0,0,0.22);
+    }
+    <% end %>
+
+    .color-tile {
+      display: flex;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      margin: 2px;
+      border-radius: 1rem;
+      cursor: pointer;
+    }
+    /*modal whatList*/
+    #modal-whatList .modal-dialog {
+      transition: none;
+      transform: none;
+    }
+    #modal-whatList > .modal-dialog {
+      position: absolute;
+    }
+    .whatList-item {
+      cursor: pointer;
+      color: dimgray;
+      padding: 0.3rem;
+      border-radius: 0.25rem;
+      transition: all 0.1s ease-in-out;
+    }
+    <% unless @mobileDevice %>
+    .whatList-item:hover {
+      background-color: #ffc107;
+      color: ghostwhite;
+    }
+    <% end %>
+    /*modal colorpicker*/
+    #modal-colorpicker .modal-dialog {
+      transition: none;
+      transform: none;
+    }
+    #modal-colorpicker > .modal-dialog {
+      position: absolute;
+      max-width: 209px;
+    }
+    .p-tag {
+      font-size: 0.8rem;
+      background-color: #ffc107;
+      border-radius: 0.2rem;
+      color: ghostwhite;
+      margin: 3px;
+      line-height: 1.6rem;
+      padding-right: 0.2rem;
+    }
+    .p-tag:before {
+      content: '';
+      background: var(--tagBackground);
+      border-bottom: 13px solid transparent;
+      border-right: var(--borderRight);
+      border-top: 13px solid transparent;
+      float: left;
+    }
+
+    .t-tag {
+      font-size: 0.8rem;
+      background-color: #ffc107;
+      border-radius: 0.2rem;
+      color: ghostwhite;
+      padding-right: 0.2rem;
+    }
+    .t-tag:before {
+      content: '';
+      background: var(--tagBackground);
+      border-bottom: var(--borderBottom);
+      border-right: var(--borderRight);
+      border-top: var(--borderTop);
+      float: left;
+    }
+
+    <% if @request_url == 'dashboard' or @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+    .checklist-item {
+      color: dimgray;
+      margin-left: 7px;
+      margin-bottom: 5px;
+    }
+    <% unless @mobileDevice %>
+    .hover-input:hover {
+      background-color: #efefef;
+    }
+    <% end %>
+    #modal-viewTask > .modal-dialog {
+      max-width: 550px;
+    }
+    input[name='modal-title'] {
+      background-color: #efefef;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      margin-bottom: 3px;
+    }
+    input[name='modal-title']:focus {
+      background-color: #efefef;
+      box-shadow: none;
+    }
+    input[name='modal-title']::placeholder {
+      color: dimgray;
+      font-weight: 400;
+      font-style: italic;
+    }
+    #modal-title {
+      height: calc(2.25rem + 2px);
+      margin-bottom: 3px;
+      padding: 0.375rem 0.75rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      line-height: 1.5;
+      border-radius: 0.25rem;
+      border: none;
+      transition: background-color 0.1s ease-in-out;
+    }
+    input[name='modal-desc'] {
+      background-color: #efefef;
+      border: none;
+    }
+    input[name='modal-desc']:focus {
+      background-color: #efefef;
+      box-shadow: none;
+    }
+    input[name='modal-desc']::placeholder {
+      font-style: italic;
+    }
+    input[name='modal-checklist'] {
+      background-color: #efefef;
+      border: none;
+    }
+    input[name='modal-checklist']:focus {
+      background-color: #efefef;
+      box-shadow: none;
+    }
+    input[name='modal-checklist']::placeholder {
+      font-style: italic;
+    }
+    #modal-desc {
+      height: calc(1.8125rem + 2px);
+      padding: 0.25rem 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.8;
+      border-radius: 0.2rem;
+      border: none;
+      transition: background-color 0.1s ease-in-out;
+    }
+    /*modal foreverCalendar*/
+    #modal-foreverCalendar .modal-dialog {
+      transition: none;
+      transform: none;
+    }
+    #modal-foreverCalendar > .modal-dialog {
+      position: absolute;
+    }
+    .tagList-item {
+      cursor: pointer;
+      color: dimgray;
+      padding: 0.3rem;
+      border-radius: 0.25rem;
+      transition: all 0.1s ease-in-out;
+    }
+    <% unless @mobileDevice %>
+    #prev:hover {
+      border-radius: 50%;
+      background-color: #ffc107;
+    }
+    #next:hover {
+      border-radius: 50%;
+      background-color: #ffc107;
+    }
+    <% end %>
+    tr {
+      border: 1px solid transparent;
+    }
+    tr > td {
+      border: 1px solid transparent;
+    }
+    .td-day {
+      min-width: 30px;
+      min-height: 30px;
+      margin: auto;
+      text-align: center;
+      border-radius: 50%;
+      transition: border-radius 50ms ease-in-out;
+      font-family: "B612 Mono";
+    }
+    <% unless @mobileDevice %>
+    .td-day:hover {
+      background-color: lightgray;
+    }
+    <% end %>
+    .name-tag {
+      font-size: 0.8rem;
+      background-color: #ffc107;
+      border-radius: 0.2rem;
+      padding: 0.2rem;
+      color: #2E2F30;
+      margin: 3px;
+    }
+    .fade-in {
+      animation-duration: 0.25s;
+      animation-timing-function: ease-in-out;
+      animation-name: fadeIn;
+      animation-fill-mode: forwards;
+    }
+    .fade-out {
+      animation-duration: 0.25s;
+      animation-timing-function: ease-in-out;
+      animation-name: fadeOut;
+      animation-fill-mode: forwards;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0;}
+      to {opacity: 1;}
+    }
+    @keyframes fadeOut {
+      from {opacity: 1;}
+      to {opacity: 0;}
+    }
+    .tbutton-sm {
+      font-size: 0.8rem;
+      color: darkgray;
+      cursor: pointer;
+      transition: color 200ms ease-in-out;
+    }
+    <% unless @mobileDevice %>
+    .tbutton-sm:hover {
+      color: #5a5a5a;
+    }
+    <% end %>
+    .comment-bubble {
+      display: flex;
+      align-items: center;
+      height: calc(2.25rem + 2px);
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.25rem;
+      background-color: #fffbf1;
+      border: 1px solid lightgray;
+      transition: background-color 0.1s ease-in-out;
+    }
+    <% if @mobileDevice %>
+    @keyframes animationBottom {
+      from {
+        bottom: -300px;
+        opacity: 0;
+      }
+      to {
+        bottom: 0;
+        opacity: 1;
+      }
+    }
+    .animate-bottom {
+      position: relative;
+      animation: animationBottom 0.4s;
+      animation-duration: 0.35s;
+    }
+
+    @keyframes animationCloseViewTask {
+      from {
+        top: -300px;
+        opacity: 0;
+      }
+      to {
+        top: 0;
+        opacity: 1;
+      }
+    }
+    .animate-closeViewTask {
+      animation: animationCloseViewTask 0.4s;
+      animation-duration: 0.35s;
+    }
+    <% end %><%# if @mobileDevice %>
+    <% end %><%# if @request_url == 'dashboard' or @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+  </style>
+
+  <script>
+    // Initialize Firebase
+    if(firebase.apps.length === 0) {
+      firebase.initializeApp(getFirebaseConfig());
+    }
+    console.log('firebase.apps.length = ' + firebase.apps.length);
+  </script>
+
+  <script>
+    window.onpageshow = function(event) {
+        if ( event.persisted || (window.performance && window.performance.navigation.type == 2)) {
+            <% if @browserInfo == 'Safari' or @mobileDevice %>
+            window.location.reload();
+            <% end %>
+        }
+    };
+
+    let browserInfo = '<%= defined? @browserInfo %>';
+    console.log('browserInfo =', browserInfo);
+
+    // Register Event Listener For FireFox
+    if( navigator.userAgent.indexOf('Firefox') >= 0 ) {
+        var eventNames = ["mousedown", "mouseover", "mouseout",
+            "mousemove", "mousedrag", "click", "dblclick",
+            "keydown", "keypress", "keyup" ];
+
+        for( var i = 0 ; i < eventNames.length; i++ ) {
+            window.addEventListener( eventNames[i], function(e) {
+                window.event = e;
+            }, true );
+        }
+    }
+
+    primaryColor = '#ffc107';
+    pathName = '<%= @request_url %>';
+    ctlName = '<%= @request_ctl %>';
+    console.log('%c request_url = ' + pathName, 'background: darkgray; color: #d6336c');
+    console.log('%c request_ctl = ' + ctlName, 'background: darkgray; color: #d6336c');
+
+    colorPalette = [
+        '#F6402C',
+        '#EB1460',
+        '#9C1AB1',
+        '#6633B9',
+        '#3D4DB7',
+        '#1093F5',
+        '#00A6F6',
+        '#00BBD5',
+        '#009687',
+        '#46AF4A',
+        '#88C440',
+        '#CCDD1E',
+        '#FFEC16',
+        '#FFC100',
+        '#FF9800',
+        '#FF5505',
+        '#7A5547',
+        '#9D9D9D',
+        '#5E7C8B',
+        '#FF1493'
+    ];
+    selectedColor = colorPalette[0];
+
+    currentI8nLocale = '<%= I18n.locale %>';
+    console.log('i8n locale =', currentI8nLocale);
+
+    <% if @request_url == 'dashboard' or @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+    pickedDate = {picked: false, year: '2008', month: '1', day: '10', ampm: 'AM', hour: '2', minute: '30'};
+    previousPickDay = null;
+    currentPickDay = null;
+    tr_today = null;
+
+    enableModalTitle = false;
+    enableModalDesc = false;
+    enableModalChecklist = false;
+    selectedTask = null;
+    taskAttachments = null;
+    projectIdfromSelectedTask = null;
+    readingHistories = false;
+    taskHistoryReader = {offset: 0, count: 5};
+    readingComments = false;
+    taskCommentReader = {offset: 0, count: 5};
+
+    historyKinds = <%= HistoryController.invKinds.inspect.html_safe %>;
+    console.log(historyKinds);
+    notificationKinds = <%= NotificationController.invKinds.inspect.html_safe %>;
+    console.log(notificationKinds);
+    <% end %>
+
+    commentMaxLength = 1024;
+
+    let welcome = '<%= t('navbar.welcome', name: '달달') %>';
+    console.log('welcome =', welcome);
+
+    function dataURItoBlob(dataURI)
+    {
+        var byteString = atob(dataURI.split(',')[1]);
+        var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0]
+        var ab = new ArrayBuffer(byteString.length);
+        var ia = new Uint8Array(ab);
+        for (var i = 0; i < byteString.length; i++)
+        {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        var bb = new Blob([ab], { "type": mimeString });
+        return bb;
+    }
+    //resize thumb and upload
+    function resizeImage(src, size, fileName, uploadImage) {
+        const image = new Image();
+        image.src = src;
+        image.onload = imageEvent => {
+            let canvas = document.createElement('canvas');
+
+            let width = image.width;
+            let height = image.height;
+            if(width > height) {
+                if(width > size) {
+                    height *= size/width;
+                    width = size;
+                }
+            } else {
+                if(height > size) {
+                    width *= size/height;
+                    height = size;
+                }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext("2d").drawImage(image, 0, 0, width, height);
+            canvas.toBlob(blob => {
+                // const file = new File([blob], fileName, {
+                //     type: 'image/jpeg',
+                //     lastModified: Date.now()
+                // });
+                uploadImage(dataURItoBlob(src), blob);
+            }, 'image/jpeg', 1);
+        }
+    };
+
+    $(function() {
+        $("#attachment-input").on('change', function(){
+            readAttachmentUrls(this);
+        });
+    });
+    function fileUploadAction(triggerButton) {
+        console.log('fileUploadAction');
+        $('#' + triggerButton).trigger('click');
+    }
+    function readAttachmentUrls(input) {
+        if (input.files && input.files[0]) {
+            $(input).next().empty();
+            for(var i=0; i<input.files.length; i++) {
+                if(input.files[i].type.indexOf('image') != -1) {
+                    var reader = new FileReader();
+                    reader.fileName = input.files[i].name;
+                    reader.onload = function (e) {
+                        var imageTag = "<img src=" + e.target.result + " alt=\"your attachment-image\"" + " name = \"" + e.target.fileName + "\" style=\"display: block; width: 100px; height: 100px; border-radius: 10%; margin-top: 20px; margin-left: 5px; margin-right: 5px; margin-bottom: 5px\" />";
+                        $(input).next().append(imageTag);
+                    }
+                    console.log('read file =', input.files[i]);
+                    reader.readAsDataURL(input.files[i]);
+                }
+            }
+        }
+    }
+    function confirmAddAttachment(obj) {
+        let children = $('#attachment-input').next().children();
+        if(children.length > 0) {
+            let uploadedCount=children.length;
+            let attachments = new Array();
+            $(obj).attr('disabled', true);
+            $(obj).text(' ' + $(obj).text());
+            $(obj).prepend("<span class=\"spinner-border spinner-border-sm\" role=\"status\" aria-hidden=\"true\"></span>");
+            $(obj).prev().attr('disabled', true);
+            children.each(function() {
+                let src = $(this).attr('src');
+                let name = $(this).attr('name') + '_' + getDateSerializedString(new Date(), true) + randomRange(0, 100);
+                resizeImage(src, 200, name, (origin, blob) => {
+                    let user = firebase.auth().currentUser;
+                    if(user) {
+                        firebase.storage().ref('images/task/' + selectedTask.id + '/').child('thumb_' + name).put(blob).then(thumbSnapshot => {
+                            console.log('Uploaded a thumb blob or file!');
+                            let attachment = {kind: 'jpeg', name: name, thumb: '', original: ''};
+                            thumbSnapshot.ref.getDownloadURL().then(thumbDownloadURL => {
+                                console.log('thumbDownloadURL available at ' + thumbDownloadURL);
+                                attachment.thumb = thumbDownloadURL;
+                                firebase.storage().ref('images/task/' + selectedTask.id + '/').child(name).put(origin).then(originalSnapshot => {
+                                    originalSnapshot.ref.getDownloadURL().then(originalDownloadURL => {
+                                        attachment.original = originalDownloadURL;
+                                        attachments.push(attachment);
+                                        console.log('Uploaded a blob or file!');
+                                        uploadedCount--;
+                                        console.log('uploadedCount =', uploadedCount);
+                                        if(uploadedCount <= 0) {
+                                            // children.each(function() {
+                                            //     $(this).appendTo($('#attachment-list'));
+                                            // })
+                                            // console.log('attachments =', attachments);
+                                            uploadAttachments(attachments);
+                                            if(obj !== undefined) {
+                                                $(obj).children('span').remove();
+                                                let uploadButtonText = $(obj).text();
+                                                uploadButtonText.replace(/^ /gi, "");
+                                                $(obj).text(uploadButtonText);
+                                                $(obj).attr('disabled', false);
+                                                $(obj).prev().attr('disabled', false);
+                                                $('#modal-addAttachment').modal('hide');
+                                            }
+                                            console.log('All files uploaded successfully!!');
+                                        }
+                                    })
+                                })
+                            })
+                        })
+                    } else {
+                        console.error('로그인 되어 있지 않습니다.');
+                    }
+                })
+            })
+        }
+    }
+    function onClickTaskAttachment(index) {
+        console.log('onClickAttachment index =', index);
+        const modalImageViewer = $('#modal-imageViewer');
+        const carouselIndicatorsImageViewer = modalImageViewer.find('#carouselIndicators-ImageViewer');
+        let carouselIndicators = carouselIndicatorsImageViewer.children('.carousel-indicators');
+        let carouselInner = carouselIndicatorsImageViewer.children('.carousel-inner');
+        carouselIndicators.empty();
+        carouselInner.empty();
+        for(let i=0; i<taskAttachments.length; i++) {
+            let li = $("<li data-target='#carouselIndicators-ImageViewer' data-slide-to='" + i + "'></li>");
+            if(i === index) {
+                li.attr('class', 'active');
+            }
+            carouselIndicators.append(li);
+
+            const attachment = taskAttachments[i];
+            let item = $("<div class='carousel-item'></div>");
+            if(i === index) {
+                item.attr('class', 'carousel-item active');
+            }
+            item.append("<img src='" + attachment.original + "' class='d-block w-100' alt='" + attachment.name + "'>");
+            carouselInner.append(item);
+        }
+        modalImageViewer.modal('show');
+    }
+    function onClickDeleteAttachment(index) {
+        console.log('onClickDeleteAttachment index =', index);
+        $('#attachment-' + index).remove();
+    }
+    function confirmDeleteAttachment(obj, index) {
+        let attachment = taskAttachments[index];
+        console.log(attachment);
+        console.log(attachment.name + ' deleting...');
+        if(attachment !== undefined) {
+            $(obj).prev().attr('disabled', true);
+            $(obj).attr('disabled', true);
+            $(obj).prepend("<span class=\"spinner-border spinner-border-sm\" role=\"status\" aria-hidden=\"true\"></span>");
+            firebase.storage().ref('images/task/' + selectedTask.id + '/').child('thumb_' + attachment.name).delete().then(() => {
+                firebase.storage().ref('images/task/' + selectedTask.id + '/').child(attachment.name).delete().then(() => {
+                    $.ajax({
+                        url: '/taskboard/deleteAttachment',
+                        type: 'post',
+                        data: {
+                            attachmentId: attachment.id
+                        },
+                        success: function(data) {
+                            if(data.result == true) {
+                                if(obj !== undefined) {
+                                    $(obj).children('span').remove();
+                                    $(obj).prev().attr('disabled', false);
+                                    $(obj).attr('disabled', false);
+                                    $('#confirmModal').modal('hide');
+                                }
+                                $('#attachment-' + index).remove();
+                            } else {
+                                console.log('result =', data.result);
+                            }
+                        },
+                        error: function(request, status, error) {
+                            console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                        }
+                    });
+                }).catch(error => {
+                    console.error('error ocurred while ' + attachment.name + ' deleting! ' + error);
+                })
+            }).catch(error => {
+                console.error('error ocurred while thumb_' + attachment.name + ' deleting! ' + error);
+            })
+        }
+    }
+    function appendAttachmentTo(index, attachmentList, editor) {
+        let attachment = taskAttachments[index];
+        let imageTag = $("<div id='attachment-" + index + "' style='cursor: pointer'></div>");
+        imageTag.append("<img src=" + attachment.thumb + " alt=\"your attachment-image\"" + " name = \"" + attachment.name + "\" onClick=\"onClickTaskAttachment(" + index + ")\" style=\"display: block; width: 100px; height: 100px; border-radius: 10%; margin-top: 20px; margin-left: 5px; margin-right: 5px; margin-bottom: 5px\" />");
+        if(editor) {
+            imageTag.append("<div style='display: flex; justify-content: center; align-items: center; position: relative; top: -114px; right: -95px; width: 20px; height: 20px; border-radius: 20%; background-color: silver; visibility: hidden' data-toggle='modal' data-kind='deleteAttachment' data-attachmentIndex='" + index + "' data-target='#confirmModal'><i class='fas fa-times'></i></div>");
+            imageTag.hover(function() {
+                $(this).children('div').last().css('visibility', 'visible');
+            }, function () {
+                $(this).children('div').last().css('visibility', 'hidden');
+            })
+        }
+        attachmentList.append(imageTag);
+    }
+    function clickTaskProgress() {
+        console.log('clickTaskProgress');
+        $('#modal-progress').modal('show');
+    }
+    function bindOnClick(obj, func) {
+        obj.css('cursor', 'pointer');
+        obj.attr('onclick', func);
+    }
+    function unbindOnClick(obj) {
+        obj.css('cursor', '');
+        obj.attr('onclick', '').unbind('click');
+    }
+    function bindModalTarget(obj, target) {
+        obj.css('cursor', 'pointer');
+        obj.attr('data-target', target);
+    }
+    function unbindModalTarget(obj) {
+        obj.css('cursor', '');
+        obj.removeAttr('data-target');
+    }
+    function fitClientHeight(obj) {
+        let clientHeight = document.documentElement.clientHeight;
+        let navbarHeight = $('.navbar')[0].clientHeight;
+        let footerHeight = $('.footer')[0].clientHeight;
+        let contentHeight = clientHeight - navbarHeight - footerHeight;
+        $(obj).css('overflow', 'auto');
+        $(obj).css('height', contentHeight);
+    }
+    function requestPost(url, params, callback) {
+        $.ajax({
+            url: url,
+            type: 'post',
+            data: params,
+            success: function(data) {
+                callback(data)
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    async function parallelSync(items, callback) {
+        await Promise.all(
+            items.map(async(item) => {
+                await callback(item);
+            })
+        );
+    }
+
+    function resizeBody() {
+        console.log('resize body');
+        let bodyElement = $('body');
+        bodyElement.css('width', Math.max(document.documentElement.clientWidth, window.innerWidth || 0));
+
+        let contentHeight = document.documentElement.clientHeight - $('.navbar')[0].clientHeight - $('.footer')[0].clientHeight;
+        bodyElement.css('height', contentHeight);
+    }
+
+    $(document).ready(function () {
+        if(ctlName == 'main') {
+        } else if(ctlName == 'user') {
+        } else if(ctlName == 'dashboard') {
+            if(pathName == 'dashboard') enableNavlink('<%= t('navbar.dashboard') %>');
+        } else if(ctlName == 'taskboard') {
+            if(pathName == 'taskboard') enableNavlink('<%= t('navbar.taskboard') %>');
+        } else if(ctlName == 'calendarview') {
+            if(pathName == 'calendarView') enableNavlink('<%= t('navbar.calendarview') %>');
+        } else if(ctlName == 'tableview') {
+            if(pathName == 'tableView') enableNavlink('<%= t('navbar.tableview') %>');
+        }
+
+        resizeBody();
+
+        console.log('document ready in application.html');
+
+        let mostZIndex = parseInt($('.navbar').css('z-index'))+1;
+        $('#beta-image').css('z-index', mostZIndex);
+
+        <% if @mobileDevice %>
+        let bodyElement = $('body');
+        $("textarea[name='textarea-comment']").on('focus', function() {
+            bodyElement.css('position', 'fixed').css('top', 0);
+        })
+        $("textarea[name='textarea-comment']").on('blur', function() {
+            bodyElement.css('position', 'static').css('top', 0);
+        })
+        $("input[name='modal-title']").on('focus', function () {
+            bodyElement.css('position', 'fixed').css('top', 0);
+        })
+        $("input[name='modal-title']").on('blur', function () {
+            bodyElement.css('position', 'static').css('top', 0);
+        })
+        $("input[name='modal-desc']").on('focus', function () {
+            bodyElement.css('position', 'fixed').css('top', 0);
+        })
+        $("input[name='modal-desc']").on('blur', function () {
+            bodyElement.css('position', 'static').css('top', 0);
+        })
+        <% end %>
+
+        $("textarea[name='textarea-comment']").on('change keyup paste', function () {
+            let length = $(this).val().length;
+            console.log('comment length =', length);
+            $('#comment-length').text(length + '/' + commentMaxLength);
+            if(length > commentMaxLength) {
+                $('#comment-length').css('color', 'red');
+                $('#submit-comment').attr('disabled', true);
+            } else {
+                $('#comment-length').css('color', 'dimgray');
+                $('#submit-comment').attr('disabled', false);
+            }
+        });
+
+        <% if @request_url == 'dashboard' or @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+        $('#modal-colorpicker').on('show.bs.modal', function (e) {
+            var maxWidth = getNumberFromString($(this).children(".modal-dialog").css('max-width'));
+            var cursorX = parseInt(event.clientX);
+            var cursorY = parseInt(event.clientY);
+
+            if( (cursorX + maxWidth) >= window.innerWidth)
+                $(this).children(".modal-dialog").css('left', cursorX-maxWidth);
+            else
+                $(this).children(".modal-dialog").css('left', event.clientX);
+            $(this).children(".modal-dialog").css('top', event.clientY);
+
+            var modalBody = $(this).find('.modal-body');
+
+            var button = $(e.relatedTarget);
+            var kind = button.data('kind');
+            var usage = button.data('usage');
+            if(kind == 'section') {
+                modalBody.empty();
+
+                var sectionId = button.data('sectionid');
+                if(sectionId == 'none') {
+                    var a = $("<div style=\"margin-bottom: 10px;\"></div>");
+                    var sectionTitle = $("<input type=\"text\" class=\"form-control form-control-sm\" name=\"section-title\" placeholder=\"제목을 입력하세요\">");
+                    a.append(sectionTitle);
+                    modalBody.append(a);
+
+                    a = $("<div id=\"color-palette\" style=\"display: flex; flex-wrap: wrap; justify-content: center; text-align: center; min-width: 150px; margin: 0 0.15rem 10px 0.15rem;\">");
+                    colorPalette.forEach(function (item) {
+                        a.append("<div class=\"color-tile\" style=\"background-color: " + item + "\" onclick='onClickColorTile(this)'></div>");
+                    });
+                    let colorTile = a.children('.color-tile').first();
+                    colorTile.append("<i style=\"align-self: center; color: ghostwhite;\" class=\"fas fa-check\"></i>");
+                    selectedColor = rgb2hex(colorTile.css('background-color'));
+                    console.log('selectedColor = ' + selectedColor);
+                    modalBody.append(a);
+
+                    a = $("<div style=\"text-align: right\">");
+                    var createButton = $("<button type=\"button\" class=\"btn btn-warning btn-sm\" disabled onclick=\"createSection(this)\">생성</button>");
+                    a.append(createButton);
+                    modalBody.append(a);
+
+                    sectionTitle.keydown(function (e) {
+                        var title = $(this).val();
+                        if(title.length == 0) createButton.attr('disabled', true);
+                        else createButton.attr('disabled', false);
+                    });
+
+                } else {
+                    var a = $("<div style=\"margin-bottom: 10px;\"></div>");
+                    var sectionTitle = $("<input type=\"text\" class=\"form-control form-control-sm\" name=\"section-title\" placeholder=\"제목을 입력하세요\">");
+                    a.append(sectionTitle);
+                    a.children('input').first().val(button.prev().text().trim());
+                    modalBody.append(a);
+
+                    selectedColor = rgb2hex(button.parent().css('background-color'));
+                    a = $("<div id=\"color-palette\" style=\"display: flex; flex-wrap: wrap; justify-content: center; text-align: center; min-width: 150px; margin: 0 0.15rem 10px 0.15rem;\">");
+                    colorPalette.forEach(function (item) {
+                        if(selectedColor.toLowerCase() == item.toLowerCase()) {
+                            a.append("<div class=\"color-tile\" style=\"background-color: " + item + "\" onclick='onClickColorTile(this)'><i style=\"align-self: center; color: ghostwhite;\" class=\"fas fa-check\"></i></div>");
+                        } else {
+                            a.append("<div class=\"color-tile\" style=\"background-color: " + item + "\" onclick='onClickColorTile(this)'></div>");
+                        }
+                    });
+                    modalBody.append(a);
+
+                    a = $("<div style=\"text-align: right\">");
+                    a.append("<button type='button' class='btn btn-secondary btn-sm' style='margin-right: 5px;' data-toggle='modal' data-kind='deleteSection' data-sectionid='" + sectionId +"' data-target='#confirmModal'>삭제</button>");
+                    var createButton = $("<button type=\"button\" class=\"btn btn-warning btn-sm\" onclick=\"modifySection(this, " + sectionId + ")\">저장</button>");
+                    a.append(createButton);
+                    modalBody.append(a);
+
+                    sectionTitle.keydown(function (e) {
+                        var title = $(this).val();
+                        if(title.length == 0) createButton.attr('disabled', true);
+                        else createButton.attr('disabled', false);
+                    });
+                }
+            }
+            if(kind == 'tag') {
+                if(usage == 'modify')
+                    selectedColor = button.data('color');
+                modalBody.empty();
+
+                var a = $("<div style=\"margin-bottom: 10px;\"></div>");
+                var tagInput = $("<input type=\"text\" class=\"form-control form-control-sm\" name=\"tag-name\" placeholder=\"<%= t('dashboard.please_input_tag') %>\">");
+                if(usage == 'modify') tagInput.val(button.text());
+                a.append(tagInput);
+                modalBody.append(a);
+
+                a = $("<div id=\"color-palette\" style=\"display: flex; flex-wrap: wrap; justify-content: center; text-align: center; min-width: 150px; margin: 0 0.15rem 10px 0.15rem;\">");
+                colorPalette.forEach(function (item) {
+                    if(usage == 'modify') {
+                        if(selectedColor.toLowerCase() == item.toLowerCase()) {
+                            a.append("<div class=\"color-tile\" style=\"background-color: " + item + "\" onclick='onClickColorTile(this)'><i style=\"align-self: center; color: ghostwhite;\" class=\"fas fa-check\"></i></div>");
+                        } else {
+                            a.append("<div class=\"color-tile\" style=\"background-color: " + item + "\" onclick='onClickColorTile(this)'></div>");
+                        }
+                    } else {
+                        a.append("<div class=\"color-tile\" style=\"background-color: " + item + "\" onclick='onClickColorTile(this)'></div>");
+                    }
+                });
+
+                if(usage == 'create') {
+                    let colorTile = a.children('.color-tile').first();
+                    colorTile.append("<i style=\"align-self: center; color: ghostwhite;\" class=\"fas fa-check\"></i>");
+                    selectedColor = rgb2hex(colorTile.css('background-color'));
+                    console.log('selectedColor = ' + selectedColor);
+                }
+                modalBody.append(a);
+
+                a = $("<div style=\"text-align: right\">");
+                if(usage == 'modify') {
+                    a.append("<button type=\"button\" class=\"btn btn-warning btn-sm\" onclick=\"modifyTag(this, " + button.data('tagid') + ")\"><%= t('dashboard.modify') %></button>");
+                }
+                else {
+                    var projectId = button.data('projectid');
+                    a.append("<button type=\"button\" class=\"btn btn-warning btn-sm\" onclick=\"createTag(" + projectId + ")\"><%= t('dashboard.add') %></button>");
+                }
+                modalBody.append(a);
+            }
+        });
+        $('#modal-colorpicker').on('hide.bs.modal', function (e) {
+            if($('#modal-viewTask').length > 0)
+                $('#modal-viewTask').css('overflow', 'auto');
+        });
+        $('#modal-foreverCalendar').on('show.bs.modal', function (event) {
+            var modalBody = $(this).find('.modal-body');
+
+            $('#timepicker').timepicker();
+            present();
+            if(pickedDate.picked == true) {
+                var t = pickedDate.hour + ':' + pickedDate.minute + ' ' + pickedDate.ampm;
+                $('#timepicker').children('button').text(t);
+            }
+        });
+        $('#modal-foreverCalendar').on('hide.bs.modal', function (event) {
+            if($('#modal-viewTask').length > 0)
+                $('#modal-viewTask').css('overflow', 'auto');
+        });
+
+        $('#modal-whatList').on('hide.bs.modal', function(e) {
+            if($('#modal-viewTask').length > 0)
+                $('#modal-viewTask').css('overflow', 'auto');
+        });
+        $('#modal-whatList').on('show.bs.modal', function (e) {
+            $(this).children(".modal-dialog").css('top', event.clientY);
+            $(this).children(".modal-dialog").css('left', event.clientX);
+            var modalBody = $(this).find('.modal-body');
+            var button = $(e.relatedTarget);
+            var kind = button.data('kind');
+
+            if(kind == 'tag') {
+                var tagList = modalBody.children('div').first();
+                tagList.empty();
+
+                jQuery.ajax({
+                    url: '/taskboard/readTags',
+                    type: 'post',
+                    data: {
+                        projectId: projectIdfromSelectedTask
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            data.tags.forEach(function (item) {
+                                var tagListItem = $("<div class=\"tagList-item\" style=\"display: flex; justify-content: space-between;\" onclick=\"onClickTagList(this, " + item.id + ")\">");
+                                tagListItem.append("<div>" + item.name + "</div>");
+
+                                var className = "fas fa-check display-none";
+                                var attachedTags = $('#tag-area').children('div').last().children('div');
+                                attachedTags.each(function() {
+                                    console.log($(this).text());
+                                    if($(this).text() == item.name) {
+                                        className = "fas fa-check";
+                                    }
+                                });
+
+                                tagListItem.append("<div><i class=\"" + className + "\"></i></div>");
+                                tagListItem.hover(function () {
+                                    $(this).css('background-color', item.color);
+                                    $(this).css('color', 'ghostwhite');
+                                }, function () {
+                                    $(this).css('background-color', 'transparent');
+                                    $(this).css('color', 'black');
+                                });
+                                tagList.append(tagListItem);
+                            });
+                            // 이 부분은 추후에 다시 한번 고려해보자
+                            // var addItem = $("<div style=\"text-align: center; color: dimgray; cursor: pointer;\" data-toggle=\"modal\" data-kind=\"tag\" data-usage=\"create\" data-projectid=" + projectIdfromSelectedTask + " data-target=\"#modal-colorpicker\">");
+                            // addItem.append("<i class=\"fas fa-plus-circle\"></i>");
+                            // tagList.append(addItem);
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+            }
+            else if(kind == 'worker' || kind == 'watcher') {
+                var memberList = modalBody.children('div').first();
+                memberList.empty();
+                jQuery.ajax({
+                    url: '/dashboard/readProjectMembers',
+                    type: 'post',
+                    data: {
+                        projectId: projectIdfromSelectedTask
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            data.members.forEach(function (item) {
+                                var memberListItem = $("<div class=\"whatList-item\" style=\"display: flex; justify-content: space-between;\" onclick=\"onClickMemberList(this, '" + kind + "', " + item.id + ")\">");
+                                memberListItem.append("<div>" + item.name + "</div>");
+
+                                var className = "fas fa-check display-none";
+                                if(kind == 'worker') {
+                                    // var workerlist = $('#worker-area').children('div').last().children("span");
+                                    var workerlist = $('#worker-list').children();
+                                    workerlist.each(function() {
+                                        if($(this).text() == item.name)
+                                            className = "fas fa-check";
+                                    });
+                                } else if(kind == 'watcher') {
+                                    var watcherlist = $('#watcher-list').children();
+                                    watcherlist.each(function() {
+                                        if($(this).text() == item.name)
+                                            className = "fas fa-check";
+                                    });
+                                }
+
+                                memberListItem.append("<div><i class=\"" + className + "\"></i></div>");
+                                memberListItem.hover(function () {
+                                    $(this).css('background-color', '#ffc107');
+                                    $(this).css('color', 'black');
+                                }, function () {
+                                    $(this).css('background-color', 'transparent');
+                                    $(this).css('color', 'black');
+                                });
+                                memberList.append(memberListItem);
+                            });
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+            } else if(kind == 'role') {
+                var pmId = button.data('pmid');
+                var role = button.data('role');
+                console.log(`role = ${role}, pmId = ${pmId}`);
+                var roleList = modalBody.children('div').first();
+                roleList.empty();
+
+                var roles = ['<%= t('application.manager') %>', '<%= t('application.worker') %>', '<%= t('application.commenter') %>'];
+                roles.forEach(function(value) {
+                    var roleListItem = $("<div class=\"roleList-item\" style=\"display: flex; justify-content: space-between;\" onclick=\"onClickRoleList(this, " + pmId + ")\">");
+                    roleListItem.append("<div>" + value + "</div>");
+
+                    var className = "fas fa-check display-none";
+                    if(value == role) {
+                        className = "fas fa-check";
+                    }
+                    roleListItem.append("<div><i class=\"" + className + "\"></i></div>");
+                    roleListItem.hover(function () {
+                        $(this).css('background-color', '#ffc107');
+                    }, function () {
+                        $(this).css('background-color', 'transparent');
+                    });
+
+                    roleList.append(roleListItem);
+                });
+            }
+        });
+        $('#modal-addAttachment').on('hide.bs.modal', function(e) {
+            if($('#modal-viewTask').length > 0)
+                $('#modal-viewTask').css('overflow', 'auto');
+        });
+        $('#modal-imageViewer').on('hide.bs.modal', function(e) {
+            if($('#modal-viewTask').length > 0)
+                $('#modal-viewTask').css('overflow', 'auto');
+        });
+        $('#modal-progress').on('show.bs.modal', function(e) {
+            let dialog = $(this);
+            let modalBody = $(this).find('.modal-body');
+
+            let progress = modalBody.find($('#task-progress-range'));
+            progress.val(selectedTask.progress);
+            progress.next().text(selectedTask.progress + '%');
+            progress.on('input', function() {
+                progress.next().text($(this).val() + '%');
+            })
+
+            let apply = dialog.find($('.modal-footer')).children('button').last();
+            apply.attr('onclick', 'confirmTaskProgress(\'#task-progress-range\')');
+        });
+        $('#modal-progress').on('hide.bs.modal', function(e) {
+            if($('#modal-viewTask').length > 0)
+                $('#modal-viewTask').css('overflow', 'auto');
+        });
+
+        var sections = new Array();
+        $(".section").each(function () {
+            sections.push('#' + $(this).attr('id'));
+        });
+
+        <% if @editor %>
+        sections.forEach(function (section, index, array) {
+            insertSortable(section, index, array);
+            // $(section).children('.task').each(function () {
+            //     buildTask($(this));
+            // });
+        });
+        <% end %>
+
+        $('#modal-viewTask').on('show.bs.modal', function (event) {
+            var dialog = $(this);
+            var modalBody = $(this).find('.modal-body');
+
+            <% if @mobileDevice %>
+            $(this).children(".modal-dialog").css('top', 42);
+            $('#close-viewTask').addClass('animate-closeViewTask');
+            $('#close-viewTask').css('z-index', dialog.css('z-index')+1);
+            $('#close-viewTask').show();
+            <% end %>
+
+            var button = $(event.relatedTarget);
+            var kind = button.data('kind');
+            console.log('kind = ' + kind);
+            var sectionId = button.data('sectionid');
+
+            if(kind == 'open-task') {
+                let taskId = button.data('taskid');
+                console.log('taskId = ' + taskId);
+                let creatorId = button.data('creatorid');
+                console.log('creatorId =', creatorId);
+
+                let editor = false;
+                let userId = <%= session[:user]['id'] %>;
+                <% if (@request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' ) %>
+                  let myRolesInProject = new Array();
+                  <% if @myRolesInProject %>
+                    <% @myRolesInProject.each do |role| %>
+                      myRolesInProject.push('<%= role.name %>');
+                    <% end %>
+                  <% end %>
+                  if(myRolesInProject.length > 0) {
+                      myRolesInProject.forEach(roles => {
+                          if(roles == 'administrator' || roles == 'manager') {
+                              editor = true;
+                          }
+                      })
+                  }
+                <% elsif @request_url == 'dashboard' %>
+                if(userId === creatorId) {
+                    editor = true;
+                }
+                <% end %>
+
+                jQuery.ajax({
+                    url: '/taskboard/readTask',
+                    type: 'post',
+                    data: {
+                        userId: <%= session[:user]['id'] %>,
+                        taskId: taskId
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            selectedTask = data.task;
+                            projectIdfromSelectedTask = data.projectId;
+                            taskHistoryReader = {offset: 0, count: 5};
+
+                            var flexArea = dialog.find('.modal-header').children().last();
+                            flexArea.empty();
+                            if(editor) {
+                                flexArea.append("<button type=\"button\" class=\"btn btn-secondary <%= @mobileDevice ? 'btn-sm' : '' %>\" data-toggle=\"modal\" data-kind=\"deleteTask\" data-taskid=\"" + taskId +"\" data-target=\"#confirmModal\" style=\"margin-right: 0.25rem;\"><%= t('application.delete') %></button>");
+                                let disabled = selectedTask.state == 'completed' ? ' disabled' : '';
+                                flexArea.append("<button type=\"button\" class=\"btn btn-warning <%= @mobileDevice ? 'btn-sm' : '' %>\"" + disabled + " onclick=\"onClickFinishTask(" + taskId + ")\"><%= t('application.complete') %></button>");
+                            }
+                            $('#comment-area').show();
+
+                            if(editor) {
+                                let modalTitle = dialog.find('#modal-title');
+                                bindOnClick(modalTitle, 'onClickModalTaskTitle(this)');
+                                modalTitle.addClass('hover-input');
+                                let modalDesc = dialog.find('#modal-desc');
+                                bindOnClick(modalDesc, 'onClickModalDesc(this)');
+                                modalDesc.addClass('hover-input');
+                                bindOnClick($('#d-day'), 'onClickCalendar(this)');
+                            } else {
+                                let modalTitle = dialog.find('#modal-title');
+                                unbindOnClick(modalTitle);
+                                modalTitle.removeClass('hover-input');
+                                let modalDesc = dialog.find('#modal-desc');
+                                unbindOnClick(modalDesc);
+                                modalDesc.removeClass('hover-input');
+                                unbindOnClick($('#d-day'));
+                            }
+                            dialog.find('#modal-title').text(selectedTask.title);
+                            dialog.find('#modal-desc').text(selectedTask.desc);
+
+                            if(selectedTask.dday) {
+                                var dday = selectedTask.dday.split('-');
+                                // $('#d-day').text(' 마감일: ' + dday[1] + '월' + ' ' + dday[2] + '일');
+                                $('#d-day').text(' <%= t('application.d-day') %>: ' + dday[1] + '<%= t('application.month') %>' + ' ' + dday[2] + '<%= t('application.day') %>');
+                                $('#d-day').prepend("<i class=\"fas fa-calendar-alt\"></i>");
+                                if(editor) {
+                                    bindOnClick($('#d-day'));
+                                } else {
+                                    unbindOnClick($('#d-day'), 'onClickCalendar(this)');
+                                }
+
+                                pickedDate.picked = true;
+                                pickedDate.year = dday[0];
+                                pickedDate.month = dday[1];
+                                pickedDate.day = dday[2];
+                                pickedDate.hour = dday[3];
+                                pickedDate.minute = dday[4];
+                                pickedDate.ampm = dday[5];
+                                console.log(pickedDate);
+                            } else {
+                                $('#d-day').text(' <%= t('application.d-day') %>: - <%= t('application.month') %> - <%= t('application.day') %>');
+                                $('#d-day').prepend("<i class=\"fas fa-calendar-alt\"></i>");
+                                pickedDate.picked = false;
+                            }
+
+                            let progressValue = selectedTask.progress;
+                            let progressArea = dialog.find($('#progress-area'));
+                            progressArea.children('div').first().text('<%= t('application.task-progress') %>: ' + progressValue.toString() + '%');
+                            let progress = progressArea.children('.progress');
+                            let progressBar = progress.children().first();
+                            progressBar.css('width', progressValue.toString() + '%');
+                            progressBar.attr('aria-valuenow', progressValue.toString());
+                            if(editor) {
+                                bindOnClick(progress, 'clickTaskProgress()');
+                            } else {
+                                if(data.worker) {
+                                    bindOnClick(progress, 'clickTaskProgress()');
+                                } else {
+                                    unbindOnClick(progress);
+                                }
+                            }
+
+                            $("#taskview-lower-tab").children('.nav-item').each(function() {
+                                if($(this).children().first().hasClass('active')) {
+                                    var tabId = $(this).children().first().attr('id');
+                                    if(tabId == 'tab-commentlist') {
+                                        $('#comment-list').empty();
+                                        taskCommentReader.offset = 0;
+                                        readComments(taskId);
+                                    }
+                                    else if(tabId == 'tab-historylist') {
+                                        $('#history-list').empty();
+                                        taskHistoryReader.offset = 0;
+                                        readHistories(taskId);
+                                    }
+                                }
+                            });
+
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+
+                if(editor) {
+                    bindModalTarget($('#worker-area').children('div').first(), '#modal-whatList');
+                } else {
+                    unbindModalTarget($('#worker-area').children('div').first());
+                }
+
+                $('#contribution-area').remove();
+                let workerlist = $('#worker-list');
+                workerlist.empty();
+                jQuery.ajax({
+                    url: '/taskboard/readWorkers',
+                    type: 'post',
+                    data: {
+                        taskId: taskId
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            if(data.count > 0) {
+                                data.assignedWorkers.forEach(function(item) {
+                                    workerlist.append("<span class=\"name-tag\">" + item.name + "</span>");
+                                });
+
+                                if(data.state == 'completed') {
+                                    let contributionArea = $("<div id='contribution-area' style='display: flex; background-color: #efefef; justify-content: flex-end'></div>");
+                                    let contributes = $('<div style="display: flex; flex-direction: column; justify-content: center"></div>');
+                                    contributes.append('<i class="far fa-thumbs-up" style="font-size: 3rem; margin-right: 0.5rem;"></i>');
+                                    contributionArea.append(contributes);
+                                    let rightSide = $("<div style='margin-right: 2rem;'></div>");
+                                    rightSide.append("<div><%= t('dashboard.contributed_persions') %></div>");
+                                    let tagList = $("<div style='display: flex'></div>");
+                                    data.assignedWorkers.forEach(function(item) {
+                                        tagList.append("<span class=\"name-tag\">" + item.name + "</span>");
+                                    });
+                                    rightSide.append(tagList);
+                                    contributionArea.append(rightSide);
+                                    // modalBody.prepend(contributionArea);
+                                    modalBody.before(contributionArea);
+                                }
+                            }
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+
+                if(editor) {
+                    bindModalTarget($('#watcher-area').children('div').first(), '#modal-whatList');
+                } else {
+                    unbindModalTarget($('#watcher-area').children('div').first());
+                }
+                let watcherlist = $('#watcher-list');
+                watcherlist.empty();
+                jQuery.ajax({
+                    url: '/taskboard/readWatchers',
+                    type: 'post',
+                    data: {
+                        taskId: taskId
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            if(data.count > 0) {
+                                data.assignedWatchers.forEach(function(item) {
+                                    watcherlist.append("<span class=\"name-tag\">" + item.name + "</span>");
+                                });
+                            }
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+
+                if(editor) {
+                    bindModalTarget($('#tag-area').children('div').first(), '#modal-whatList');
+                } else {
+                    unbindModalTarget($('#tag-area').children('div').first());
+                }
+                jQuery.ajax({
+                    url: '/taskboard/readAttachedTags',
+                    type: 'post',
+                    data: {
+                        taskId: taskId
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            var taglist = $('#tag-list');
+                            taglist.empty();
+                            data.tags.forEach(function (item) {
+                                // taglist.append("<span class=\"p-tag\" style='background-color: " + item.color + "'>" + item.name + "</span>");
+                                taglist.append("<div class=\"p-tag\" style='background-color: " + item.color + "; --tagBackground: white; --borderRight: 10px solid " + item.color + ";'>" + item.name + "</div>");
+                                // var ptag = $("<div class=\"p-tag\" style='background-color: " + item.color + "; --borderRight: 10px solid " + item.color + ";'></div>");
+                                // ptag.append("<div>" + item.name + "</div>");
+                                // taglist.append(ptag);
+                            });
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+
+                var checklistItmes = new Array();
+                $('#checklist-area').children('.checklist-item').each(function() {
+                    checklistItmes.push($(this));
+                });
+                checklistItmes.forEach(function(item) {
+                    item.remove();
+                });
+
+                $('#checklist-area').empty().text('<%= t('application.checklist') %>');
+                console.log(`readChecklist taskId=${taskId} userId=${<%= session[:user]['id'] %>}`);
+                jQuery.ajax({
+                    url: '/taskboard/readChecklists',
+                    type: 'post',
+                    data: {
+                        userId: <%= session[:user]['id'] %>,
+                        taskId: taskId
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            data.checklists.forEach(function(item) {
+                                addChecklistItem($('#checklist-area'), item.content, item.id, item.strikeout, editor, data.worker);
+                            });
+                        } else {
+                        }
+                        if(editor) {
+                            $('#checklist-area').append("<div style=\"font-size: 1rem; color: #4131c3; margin: 15px; cursor: pointer;\" onclick=\"onClickAddChecklist(this)\"><i class=\"fas fa-plus\"></i><span style=\"margin-left: 0.5rem;\"><%= t('application.add_checklist') %></span></div>");
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+
+                let attachmentList = $(this).find($('#attachment-list'));
+                attachmentList.empty();
+                jQuery.ajax({
+                    url: '/taskboard/readAttachments',
+                    type: 'post',
+                    data: {
+                        taskId: taskId
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            if(data.attachments.length > 0) {
+                                taskAttachments = data.attachments;
+                                for(let i=0; i<taskAttachments.length; i++) {
+                                    appendAttachmentTo(i, attachmentList, editor);
+                                }
+                                let downloadButton = $('#download-all-attachments');
+                                downloadButton.show();
+                                downloadButton.on('click', async function() {
+                                    downloadButton.attr('disabled', true);
+                                    downloadButton.text(' ' + downloadButton.text());
+                                    downloadButton.prepend("<span class=\"spinner-border spinner-border-sm\" role=\"status\" aria-hidden=\"true\"></span>");
+
+                                    let blobs = new Array();
+                                    await parallelSync(taskAttachments, async (attachment) => {
+                                        let response = await fetch(attachment.original);
+                                        let blob = await response.blob();
+                                        blobs.push({name: attachment.name.split('_')[0], blob: blob});
+                                        // console.log('attachment original =', blob);
+                                    });
+                                    let zip = new JSZip();
+                                    blobs.forEach(blob => {
+                                        zip.file(blob.name, blob.blob);
+                                        // console.log('add blob =', blob.name);
+                                    })
+                                    // console.log('zip =', zip);
+
+                                    zip.generateAsync({type: 'blob'}).then(blob => {
+                                        console.log('generateAsync blob =', blob);
+                                        let fileURL = $(this).next('a').get(0);
+                                        fileURL.href = window.URL.createObjectURL(blob);
+                                        fileURL.download = 'attachments.zip';
+                                        fileURL.click();
+                                        downloadButton.children('span').remove();
+                                        downloadButton.attr('disabled', false);
+                                    }, err => {
+                                        console.alert('failed generating zip file err =', err);
+                                    });
+                                    // console.log('finished download all attachments');
+                                });
+                            } else {
+                                $('#download-all-attachments').hide();
+                            }
+                        } else {
+                            console.log('attachments read failed');
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+
+                $("textarea[name='textarea-comment']").val('');
+                $('#comment-length').text('0/' + commentMaxLength);
+                $('#submit-comment').attr('disabled', false);
+            }
+        });
+        $('#modal-viewTask').on('hide.bs.modal', function (event) {
+            <% if @request_url == 'taskboard' %>
+            if(selectedTask) {
+                if($('#worker-list').children().length > 0) {
+                    var workerName = $('#worker-list').children().eq(0).text();
+                    var nameTag = $('#task-' + selectedTask.id).children().eq(0).children('.name-tag');
+                    if(nameTag.length > 0)
+                        nameTag.eq(0).text(workerName);
+                    else
+                        $('#task-' + selectedTask.id).children().eq(0).append("<div class='name-tag'>" + workerName + "</div>");
+                } else {
+                    var nameTag = $('#task-' + selectedTask.id).children().eq(0).children('.name-tag');
+                    if(nameTag.length > 0)
+                        nameTag.remove();
+                }
+            }
+            <% end %>
+            <% if @mobileDevice %>
+            $('#close-viewTask').removeClass('animate-closeViewTask');
+            $('#close-viewTask').hide();
+            <% end %>
+        });
+        $('#modal-viewTask').click(function (e) {
+            if(enableModalTitle == true) {
+                if($(e.target).get(0) != $("input[name='modal-title']").get(0)) {
+                    console.log('It does not same element');
+                    var title = $("input[name='modal-title']").val();
+                    if(selectedTask) {
+                        renameTaskTitle(selectedTask, title, function (s) {
+                            $("input[name='modal-title']").replaceWith("<div id=\"modal-title\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalTaskTitle(this)\">" + s + "</div>");
+                            selectedTask.title = s;
+                            enableModalTitle = false;
+                            $('#task-' + selectedTask.id).children().first().children().first('h5').text(selectedTask.title);
+                        });
+                    } else {
+                        $("input[name='modal-title']").replaceWith("<div id=\"modal-title\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalTaskTitle(this)\">" + title + "</div>");
+                        enableModalTitle = false;
+                    }
+                }
+            }
+            if(enableModalDesc == true) {
+                if($(e.target).get(0) != $("input[name='modal-desc']").get(0)) {
+                    console.log('It does not same element');
+                    var desc = $("input[name='modal-desc']").val();
+                    if(selectedTask) {
+                        renameTaskDesc(selectedTask, desc, function (s) {
+                            $("input[name='modal-desc']").replaceWith("<div id=\"modal-desc\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalDesc(this)\">" + s + "</div >");
+                            selectedTask.desc = s;
+                            enableModalDesc = false;
+                        });
+                    } else {
+                        $("input[name='modal-desc']").replaceWith("<div id=\"modal-desc\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalDesc(this)\">" + desc + "</div >");
+                        enableModalDesc = false;
+                    }
+                }
+            }
+            if(enableModalChecklist == true) {
+                if($(e.target).get(0) != $("input[name='modal-checklist']").get(0)) {
+                    console.log('It does not same element');
+                    var checklist = $("input[name='modal-checklist']").val();
+                    console.log('checklist = ' + checklist);
+                    confirmChecklist($("input[name='modal-checklist']").get());
+                }
+            }
+        });
+        $('#modal-viewTask').scroll(function() {
+            let scrollTop = $(this).scrollTop();
+            let scrollHeight = $(this).height();
+            let contentHeight = $(this).children('.modal-dialog').first().height();
+            if(scrollTop+scrollHeight >= contentHeight) {
+                console.log(`scrollTop = ${scrollTop}, contentHeight = ${contentHeight} scrollHeight = ${scrollHeight}`);
+                if($('#tab-historylist').hasClass('active')) {
+                    if(readingHistories === false) {
+                        readHistories(selectedTask.id);
+                    }
+                }
+                if($('#tab-commentlist').hasClass('active')) {
+                    if(readingComments === false) {
+                        readComments(selectedTask.id);
+                    }
+                }
+            }
+        });
+        $('#modal-modifyProject').on('show.bs.modal', function (event) {
+            let modal = $(this);
+            let button = $(event.relatedTarget);
+            let projectId = button.data('projectid');
+            console.log('modifyProject id = ' + projectId);
+
+            $('#attr-tab li:first-child a').tab('show');
+
+            jQuery.ajax({
+                url: '/dashboard/readProject',
+                type: 'post',
+                data: {
+                    userId: <%= session[:user]['id'] %>,
+                    projectId: projectId
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        let modalHeader = modal.find('.modal-header');
+
+                        // selectedProject = myProjects.find(p => p.id == projectId);
+                        selectedProject = data.project;
+                        let modalTitle = modalHeader.find('#modal-title');
+                        modalTitle.attr('onclick', "onClickModalProjectTitle(this, " + selectedProject.id + ")");
+                        modalTitle.text(selectedProject.title);
+
+                        let modalDesc = modalHeader.find('#modal-desc');
+                        modalDesc.attr('onclick', "onClickModalDesc(this, " + selectedProject.id + ")");
+                        modalDesc.text(selectedProject.desc);
+
+                        let modalBody = modal.find('.modal-body');
+                        if(modalBody.find('#tab-members').hasClass('active')) {
+                            readProjectMembers();
+                        } else if(modalBody.find('#tab-tags').hasClass('active')) {
+                            readProjectTags();
+                        }
+
+                        let tabPanelTags = modal.find('#tabpanel-tags');
+                        tabPanelTags.children().last().children('a').first().attr('data-projectid', selectedProject.id);
+
+                        let modalFooter = modal.find('.modal-footer');
+                        modalFooter.empty();
+                        modalFooter.append("<button type=\"button\" class=\"btn btn-secondary\" data-dismiss=\"modal\"><%= t('application.close') %></button>");
+                        modalFooter.append("<button type=\"button\" class=\"btn btn-warning\" data-toggle='modal' data-kind='deleteProject' data-projectid='" + selectedProject.id +"' data-target='#confirmModal'><%= t('application.delete') %></button>");
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        });
+        $('#modal-modifyProject').click(function (e) {
+            if(enableModalTitle == true) {
+                if($(e.target).get(0) != $("input[name='modal-title']").get(0)) {
+                    console.log('It does not same element');
+                    var title = $("input[name='modal-title']").val();
+                    renameProjectTitle(selectedProject.id, title, function (s) {
+                        $("input[name='modal-title']").replaceWith("<div id=\"modal-title\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalProjectTitle(this, " + selectedProject.id + ")\">" + s + "</div>");
+                        enableModalTitle = false;
+                        $('#project-' + selectedProject.id).children().first().text(' ' + s).prepend("<span><i class=\"fas fa-place-of-worship\" style=\"color: sienna;\"></i></span>");
+                    });
+                }
+            }
+            if(enableModalDesc == true) {
+                if($(e.target).get(0) != $("input[name='modal-desc']").get(0)) {
+                    console.log('It does not same element');
+                    var desc = $("input[name='modal-desc']").val();
+                    renameProjectDesc(selectedProject.id, desc, function (s) {
+                        $("input[name='modal-desc']").replaceWith("<div id=\"modal-desc\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalDesc(this, " + selectedProject.id + ")\">" + s + "</div >");
+                        enableModalDesc = false;
+                    });
+                }
+            }
+        });
+        $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+            console.log('%c show tab modal', 'color: blue');
+            console.log(e.target);
+            var tabId = $(e.target).data('tabid');
+            if(tabId == 'comment-list') {
+                $('#comment-list').empty();
+                taskCommentReader.offset = 0;
+                $.ajax({
+                    url: '/taskboard/readCommentCount',
+                    type: 'post',
+                    data: {
+                        taskId: selectedTask.id
+                    },
+                    success: function(data) {
+                        console.log('readCommentCount data =', data);
+                        if(data.result == true) {
+                            selectedTask.comment_count = data.commentCount;
+                            readComments(selectedTask.id);
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+            } else if(tabId == 'history-list') {
+                $('#history-list').empty();
+                taskHistoryReader.offset = 0;
+                $.ajax({
+                    url: '/taskboard/readHistoryCount',
+                    type: 'post',
+                    data: {
+                        taskId: selectedTask.id
+                    },
+                    success: function(data) {
+                        console.log('readHistoryCount data =', data);
+                        if(data.result == true) {
+                            selectedTask.history_count = data.historyCount;
+                            readHistories(selectedTask.id);
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+            } else if(tabId == 'member-list') {
+                readProjectMembers();
+            } else if(tabId == 'tag-list') {
+                readProjectTags();
+            }
+        });
+        $('#confirmModal').on('show.bs.modal', function (event) {
+            let button = $(event.relatedTarget);
+            let kind = button.data('kind');
+            $(this).find('.modal-body').empty();
+            if(kind == 'deleteTask') {
+                $(this).find('#confirmModal-Label').text('<%= t('application.what_delete', what: t('application.task')) %>');
+                let taskId = button.data('taskid');
+                $(this).find('.modal-body').append("<p><%= t('application.cant_restore_delete') %><br><%= t('application.really_want_delete') %></p>");
+                let confirmButton = $(this).find('.modal-footer').children('button').last();
+                confirmButton.replaceWith("<button type=\"button\" class=\"btn btn-warning\" onclick=\"confirmDeleteTask(this, " + taskId + ")\"><%= t('application.delete') %></button>");
+            } else if(kind == 'deleteSection') {
+                $(this).find('#confirmModal-Label').text('<%= t('application.what_delete', what: t('application.section')) %>');
+                let sectionId = button.data('sectionid');
+                $(this).find('.modal-body').append("<p><%= t('application.cant_restore_delete') %><br><%= t('application.really_want_delete') %></p>");
+                let confirmButton = $(this).find('.modal-footer').children('button').last();
+                confirmButton.replaceWith("<button type=\"button\" class=\"btn btn-warning\" onclick=\"confirmDeleteSection(" + sectionId + ")\"><%= t('application.delete') %></button>");
+            } else if(kind == 'deleteComment') {
+                $(this).find('#confirmModal-Label').text('<%= t('application.what_delete', what: t('application.comment')) %>');
+                let commentId = button.data('commentid');
+                $(this).find('.modal-body').append("<p><%= t('application.cant_restore_delete') %><br><%= t('application.really_want_delete') %></p>");
+                let confirmButton = $(this).find('.modal-footer').children('button').last();
+                confirmButton.replaceWith("<button type=\"button\" class=\"btn btn-warning\" onclick=\"confirmDeleteComment(" + commentId + ")\"><%= t('application.delete') %></button>");
+            } else if(kind == 'deleteAttachment') {
+                $(this).find('#confirmModal-Label').text('<%= t('application.what_delete', what: t('application.attachment')) %>');
+                let attachmentIndex = button.data('attachmentindex');
+                $(this).find('.modal-body').append("<img style='width: 100px; height: 100px; border-radius: 20%' src='" + taskAttachments[attachmentIndex].thumb + "' >");
+                let confirmButton = $(this).find('.modal-footer').children('button').last();
+                confirmButton.replaceWith("<button type=\"button\" class=\"btn btn-warning\" onclick=\"confirmDeleteAttachment(this, " + attachmentIndex + ")\"><%= t('application.delete') %></button>");
+            } else if(kind == 'deleteMemeber') {
+                var pmId = button.data('pmid');
+                console.log(pmId);
+                $(this).find('#confirmModal-Label').text('<%= t('dashboard.delete_member') %>');
+                $(this).find('.modal-body').append("<p><%= t('dashboard.confirm_delete_member') %></p>");
+                $(this).find('.modal-footer').children().last().attr('onclick', 'onClickDeleteMember(this,' + pmId + ')');
+            } else if(kind == 'deleteProject') {
+                $(this).find('#confirmModal-Label').text('<%= t('application.what_delete', what: t('dashboard.project')) %>');
+                let projectId = button.data('projectid');
+                console.log('projectId =', projectId);
+                $(this).find('.modal-body').append("<p><%= t('application.cant_restore_delete') %><br><%= t('application.really_want_delete') %></p>");
+                $(this).find('.modal-footer').children().last().attr('onclick', 'confirmDeleteProject(this,' + projectId + ')');
+            }
+        });
+        $('#confirmModal').on('hide.bs.modal', function (event) {
+            if($('#modal-viewTask').length > 0)
+                $('#modal-viewTask').css('overflow', 'auto');
+        });
+        $('#modal-addMember').on('show.bs.modal', function (event) {
+
+            var modalBody = $(this).find('.modal-body');
+            console.log(modalBody);
+
+            if($('#friend-list').length > 0) {
+                $('#friend-list').remove();
+            }
+
+            //addMemberArea 아래 myAmsify 관련해서 공통적으로 쓰기때문에 해당 클래스는 모두 지워준다.
+            $('.addMember-area').each(function (index, item) {
+                console.log('item =', $(item));
+                $(item).empty();
+            });
+            let addMemberArea = modalBody.find('.addMember-area');
+            // addMemberArea.empty();
+
+            jQuery.ajax({
+                url: '/dashboard/readInvitations',
+                type: 'post',
+                data: {
+                    userId: <%= session[:user]['id'] %>
+                },
+                success: function(data) {
+                    console.log('result readInvitations =', data);
+                    if(data.result == true) {
+                        var suggests = new Array();
+
+                        var friendList = $("<div id='friend-list' style='display: flex; flex-wrap: wrap; margin-top: 5px;'></div>");
+                        for(var friend of data.friends) {
+                            // $('#sel-friends').append("<option value=" + friend.id +">" + friend.name + "</option>");
+                            suggests.push(friend.name);
+
+                            //var memberButton = $("<button type=\"button\" class=\"btn btn-warning btn-sm\" id='member-" + friend.name + "' style='line-height: 0.7rem; margin: 2px'>" + friend.name + " <i class=\"fas fa-plus\"></i></button>");
+                            // var memberButton = $("<button type=\"button\" class=\"btn btn-warning btn-sm\" id='member-" + friend.name + "' data-account='" + friend.account + "' style='line-height: 0.7rem; margin: 2px'>" + friend.name + "</button>");
+                            let memberButton = $("<button type=\"button\" class=\"btn btn-warning btn-sm\" id='member-" + friend.name + "' style='line-height: 0.7rem; margin: 2px'>" + friend.name + "</button>");
+                            memberButton.text(friend.name + '<' + friend.account + '>');
+                            memberButton.on('click', function() {
+                                console.log('click member = ' + $(this).attr('id'));
+                                console.log('account = ' + $(this).data('account'));
+                                myAmsify.addTag($(this).text());
+                            }).appendTo(friendList);
+                        }
+
+                        appendInputMember(addMemberArea);
+
+                        $('#input-member').parent().append(friendList);
+
+                        //나중에 Group Member 로 추가해넣는다.
+                        suggests.push('salhyun@naver.com');
+                        suggests.push('salhyun@daum.net');
+                        suggests.push('kimdh');
+
+                        myAmsify = $('#input-member').amsifySuggestags({
+                            suggestions: suggests
+                        });
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        });
+        <% end %>//@request_url == 'dashboard' or @request_url == 'taskboard
+    });
+    function enableNavlink(itemName) {
+        if(itemName == null) {
+            $('#navbarSupportedContent').children('ul').children('li').each(function () {
+                $(this).removeClass('active');
+            });
+        } else {
+            $('#navbarSupportedContent').children('ul').children('li').each(function () {
+                $(this).removeClass('active');
+                if($(this).children('a').text().indexOf(itemName) >= 0) {
+                    $(this).addClass('active');
+                }
+            });
+        }
+    }
+    function onClicHome() {
+        enableNavlink(null);
+        location.href='/';
+    }
+    function onClickColorTile(obj) {
+        $('.color-tile').each(function () {
+            if($(this).children('i').length > 0)
+                $(this).empty();
+        });
+        $(obj).append("<i style=\"align-self: center; color: ghostwhite;\" class=\"fas fa-check\"></i>");
+        selectedColor = rgb2hex($(obj).css('background-color'));
+        console.log('selectedColor = ' + selectedColor);
+    }
+
+    <% if @request_url == 'dashboard' or @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+    function readProjectMembers() {
+        jQuery.ajax({
+            url: '/dashboard/readProjectMembers',
+            type: 'post',
+            data: {
+                projectId: selectedProject.id
+            },
+            success: function(data) {
+                console.log('readProjectMembers =', data);
+                if(data.result == true) {
+                    let memberlist = $('#tabpanel-members').children().first();
+                    memberlist.empty();
+                    data.members.forEach(function (item) {
+                        append_pmember(memberlist, item);
+                    });
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function readProjectTags() {
+        jQuery.ajax({
+            url: '/taskboard/readTags',
+            type: 'post',
+            data: {
+                projectId: selectedProject.id
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    var taglist = $('#tabpanel-tags').children().first();
+                    taglist.empty();
+                    data.tags.forEach(function(item) {
+                        append_ptag(taglist, item);
+                    });
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function append_pmember(parent, member) {
+        console.log('append pmember =', member);
+
+        var pmember = $("<div class='p-member' id='p-member-" + member.pmid + "' style='display: flex; justify-content: flex-start; width: 100%; color: #7b7b7b;'></div>");
+        pmember.append("<div style='flex-basis: 25%'>" + member.name + "</div>");
+        pmember.append("<div style='flex-basis: 47%'>" + member.account + "</div>");
+        var role = $("<div style='flex-basis: 25%'>" + member.role + "</div>").append("<span style='margin-left: 3px; cursor: pointer;' data-toggle='modal' data-kind='role' data-pmid='" + member.pmid + "' data-role='" + member.role + "' data-target='#modal-whatList'><i class=\"fas fa-angle-down\"></i></span>");
+        pmember.append(role);
+        pmember.append("<div style='visibility: hidden; transition: visibility 0.01s ease-in-out; cursor: pointer;' data-toggle='modal' data-kind='deleteMemeber' data-pmid='" + member.pmid + "' data-target='#confirmModal' ><i class='fas fa-times'></i></div>");
+        pmember.hover(function () {
+            $(this).children().last().css('visibility', 'visible');
+        }, function () {
+            $(this).children().last().css('visibility', 'hidden');
+        });
+        parent.append(pmember);
+    }
+    function append_ptag(parent, tag) {
+        var ptag = $("<div class=\"p-tag\" id='p-tag-" + tag.id + "' style='background-color: " + tag.color + "; --tagBackground: #f5f5f5; --borderRight: 10px solid " + tag.color + ";'></div>");
+        ptag.append("<span style='cursor: pointer;' data-toggle='modal' data-kind='tag' data-usage='modify' data-tagid='" + tag.id + "' data-color='" + tag.color + "' data-target='#modal-colorpicker'>" + tag.name + "</span>");
+        ptag.append("<span style='margin-left: 0.25rem; cursor: pointer;' onclick='deleteTag(" + tag.id + ")'><i class=\"fas fa-times\" style='vertical-align: middle'></i></span>");
+        parent.append(ptag);
+    }
+    function onClickModalProjectTitle(obj, projectId) {
+        replaceModalProjectTitle($(obj), projectId, 100);
+    }
+    function renameProjectTitle(projectId, newTitle, post) {
+        jQuery.ajax({
+            url: '/dashboard/renameProjectTitle',
+            type: 'post',
+            data: {
+                projectId: projectId,
+                title: newTitle
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    post(data.title);
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function replaceModalProjectTitle(obj, projectId, delay) {
+        var inputTitle = $("<input type='text' class='form-control' name='modal-title' placeholder='<%= t('dashboard.please_input_title') %>'>");
+        inputTitle.val(obj.text());
+        inputTitle.keypress(function (e) {
+            if(e.which == 13) {//press enter key
+                var title = $(this).val();
+                if(title) {
+                    console.log('title = ' + title);
+                    renameProjectTitle(projectId, title, function (s) {
+                        inputTitle.replaceWith("<div id=\"modal-title\" class='hover-input' style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalProjectTitle(this, " + projectId + ")\">" + s + "</div>");
+                        enableModalTitle = false;
+                        $('#project-' + projectId).children().first().text(' ' + s).prepend("<span><i class=\"fas fa-place-of-worship\" style=\"color: sienna;\"></i></span>");
+                    });
+                }
+            }
+        });
+        obj.replaceWith(inputTitle);
+        setTimeout(function () {
+            $("input[name='modal-title']").focus();
+            enableModalTitle = true;
+        }, delay);
+    }
+    function onClickModalProjectDesc(obj, projectId) {
+        replaceModalProjectDesc($(obj), projectId, 100);
+    }
+    function renameProjectDesc(projectId, newDesc, post) {
+        jQuery.ajax({
+            url: '/dashboard/renameProjectDesc',
+            type: 'post',
+            data: {
+                projectId: projectId,
+                desc: newDesc
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    post(data.desc);
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function replaceModalProjectDesc(obj, projectId, delay) {
+        var inputDesc = $("<input type='text' class='form-control form-control-sm' name='modal-desc' placeholder='<%= t('dashboard.please_input_desc') %>'>");
+        inputDesc.val(obj.text());
+        inputDesc.keypress(function (e) {
+            if(e.which == 13) {//press enter key
+                var desc = $(this).val();
+                console.log('desc = ' + desc);
+                renameProjectDesc(projectId, desc, function (s) {
+                    inputDesc.replaceWith("<div id=\"modal-desc\" class='hover-input' style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalDesc(this" + projectId + ")\">" + s + "</div >");
+                    enableModalDesc = false;
+                });
+            }
+        });
+        obj.replaceWith(inputDesc);
+        setTimeout(function () {
+            $("input[name='modal-desc']").focus();
+            enableModalDesc = true;
+        }, delay);
+    }
+    function modifyTag(obj, tagId) {
+        var tagName = $("input[name='tag-name']").val();
+        console.log('name = ' + tagName + ', color = ' + selectedColor);
+
+        jQuery.ajax({
+            url: '/dashboard/modifyTag',
+            type: 'post',
+            data: {
+                tagId: tagId,
+                name: tagName,
+                color: selectedColor
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    var ptag = $('#p-tag-' + data.tag.id);
+                    ptag.replaceWith("<div class=\"p-tag\" id='p-tag-" + data.tag.id + "' style='background-color: " + data.tag.color + "; --tagBackground: #f5f5f5; --borderRight: 10px solid " + data.tag.color + ";'></div>");
+                    ptag = $('#p-tag-' + data.tag.id);
+                    ptag.append("<span style='cursor: pointer;' data-toggle='modal' data-kind='tag' data-tagid='" + data.tag.id + "' data-color='" + data.tag.color + "' data-target='#modal-colorpicker'>" + data.tag.name + "</span>");
+                    ptag.append("<span style='margin-left: 0.25rem; cursor: pointer;'><i class=\"fas fa-times\" style='vertical-align: middle'></i></span>");
+                    $('#modal-colorpicker').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function deleteTag(tagId) {
+        jQuery.ajax({
+            url: '/dashboard/deleteTag',
+            type: 'post',
+            data: {
+                tagId: tagId
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    var taglist = $('#tabpanel-tags').children().first();
+                    var a = taglist.find('#p-tag-' + tagId);
+                    if(a.length > 0) a.remove();
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function createTag(projectId) {
+        var tagName = $("input[name='tag-name']").val();
+        console.log('tagName = ' + tagName + ', color = ' + selectedColor + ', projectId = ' + projectId);
+        jQuery.ajax({
+            url: '/taskboard/addTag',
+            type: 'post',
+            data: {
+                projectId: projectId,
+                name: tagName,
+                color: selectedColor
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    append_ptag($('#tabpanel-tags').children().first(), data.tag);
+                    $('#modal-colorpicker').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+
+    function appendInputMember(parent) {
+        var formgroup = $("<div class=\"form-group\" style=\"margin-top: 10px;\">");
+        formgroup.append("<label for=\"input-member\" style=\"margin-bottom: 0;\"><%= t('dashboard.add_member') %></label>");
+        formgroup.append("<input id=\"input-member\" name=\"member\" type=\"text\" class=\"form-control form-control-sm\" placeholder=\"<%= t('dashboard.please_input_additional_member') %>\">");
+        parent.append(formgroup);
+        parent.append("<textarea id=\"invitation-msg\" class=\"form-control\" rows=\"3\" placeholder=\"<%= t('dashboard.please_input_welcome_message') %>\"></textarea>");
+    }
+    function onClickAddMember(obj) {
+        var members = $('#input-member').val().split(',');
+        console.log(members);
+        var accounts = new Array();
+        members.forEach(function (item) {
+            if(item.indexOf('@') == -1) {
+                var friend = $('#friend-list').children('#member-' + item);
+                if(friend.length > 0)
+                    accounts.push(friend.data('account'));
+            } else {
+                accounts.push(item);
+            }
+        });
+        console.log(accounts);
+
+        $(obj).text($(obj).text() + ' ');
+        $(obj).append("<i class=\"fas fa-circle-notch fa-spin\"></i>");
+        $(obj).attr('disabled', true);
+
+        jQuery.ajax({
+            url: '/dashboard/inviteAccounts',
+            type: 'post',
+            data: {
+                ownerId: <%= session[:user]['id'] %>,
+                projectId: selectedProject.id,
+                accounts: accounts,
+                message: $('#invitation-msg').val()
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $(obj).attr('disabled', false);
+                    $(obj).empty();
+                    $(obj).text('<%= t('dashboard.add') %>');
+                    $('#modal-addMember').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function onClickRoleList(obj, pmId) {
+        $('.roleList-item').each(function() {
+            var i = $(this).children().last().children().first();
+            var className = i.attr('class');
+            if(className.indexOf('display-none') == -1) {
+                i.addClass('display-none');
+            }
+        });
+        var i = $(obj).children().last().children().first();
+        i.removeClass('display-none');
+
+        var roletypeId = 3;
+        var roletype = $(obj).children().first().text();
+        if(roletype == '<%= t('application.manager') %>') {
+            roletypeId = 2;
+        } else if(roletype == '<%= t('application.worker') %>') {
+            roletypeId = 3;
+        } else if(roletype == '<%= t('application.commenter') %>') {
+            roletypeId = 4;
+        }
+
+        jQuery.ajax({
+            url: '/dashboard/changeRole',
+            type: 'post',
+            data: {
+                pmId: pmId,
+                roletypeId: roletypeId
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $('#p-member-' + pmId).children().eq(2).text(data.roletype);
+                    $('#p-member-' + pmId).children().eq(2).append("<span style='margin-left: 3px; cursor: pointer;' data-toggle='modal' data-kind='role' data-pmid='" + pmId + "' data-role='" + data.roletype + "' data-target='#modal-whatList'><i class=\"fas fa-angle-down\"></i></span>");
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function onClickDeleteMember(obj, pmId) {
+        jQuery.ajax({
+            url: '/dashboard/deleteProjectMember',
+            type: 'post',
+            data: {
+                pmId: pmId,
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $('#p-member-' + pmId).remove();
+                    $('#confirmModal').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function confirmDeleteProject(obj, projectId) {
+        console.log('dashboard confirmDeleteProject id =', projectId);
+        jQuery.ajax({
+            url: '/dashboard/deleteProject',
+            type: 'post',
+            data: {
+                projectId: projectId
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $('#confirmModal').modal('toggle');
+                    setTimeout(() => {
+                        $('#modal-modifyProject').modal('toggle');
+                        if(pathName == 'dashboard' && ctlName == 'dashboard') {
+                            $('#project-' + projectId).remove();
+                        } else if(pathName == 'taskboard' && ctlName == 'taskboard') {
+                            setTimeout(() => {window.location = '/dashboard/dashboard'}, 50);
+                        } else if(pathName == 'calendarview' && ctlName == 'calendarView') {
+                            setTimeout(() => {window.location = '/dashboard/dashboard'}, 50);
+                        } else if(pathName == 'tableview' && ctlName == 'tableView') {
+                            setTimeout(() => {window.location = '/dashboard/dashboard'}, 50);
+                        }
+                    }, 100);
+                } else {
+                    alert(data.message);
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+
+    function onClickChecklist(obj, checklistId) {
+        var circle = $(obj);
+        jQuery.ajax({
+            url: '/taskboard/strikeoutChecklist',
+            type: 'post',
+            data: {
+                userId: <%= session[:user]['id'] %>,
+                taskId: selectedTask.id,
+                checklistId: checklistId,
+                strikeout: circle.hasClass('fa-circle')
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    if(data.checklist.strikeout) {
+                        circle.removeClass('fa-circle');
+                        circle.addClass('fa-check-circle');
+                        circle.next('span').css('text-decoration', 'line-through');
+                    } else {
+                        circle.removeClass('fa-check-circle');
+                        circle.addClass('fa-circle');
+                        circle.next('span').css('text-decoration', '');
+                    }
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function onClickAddChecklist(obj) {
+        console.log('onClickAddChecklist');
+        var flexArea = $("<div style='display: flex; align-items: flex-end;'></div>");
+        var inputChecklist = $("<input type='text' name='modal-checklist' class='form-control form-control-sm' style='margin-top: 15px; margin-right: 5px;' placeholder='입력하세요'>");
+        inputChecklist.keypress(function (e) {
+            if(e.which == 13) {//press enter key
+                confirmChecklist(this);
+            }
+        });
+        flexArea.append(inputChecklist);
+        // flexArea.append("<button type='button' class='btn btn-warning btn-sm' onclick='confirmChecklist(this)'>등록</button>");
+        parent = $(obj).parent();
+        $(obj).remove();
+        parent.append(flexArea);
+
+        setTimeout(function () {
+            inputChecklist.focus();
+            enableModalChecklist = true;
+        }, 100);
+    }
+
+    function addChecklistItem(parent, content, checklistId, strikeout, editor, worker) {
+        if(editor) {
+            let checklistItem = $("<div class=\"checklist-item\" id='checklist-" + checklistId + "' style='display: flex; justify-content: space-between; margin-right: 1.5rem; cursor: pointer'>");
+
+            if(strikeout)
+                checklistItem.append("<div><i class=\"far fa-check-circle\" style=\"color: #ffc107;\" onclick=\"onClickChecklist(this, " + checklistId + ")\"></i><span style=\"margin-left: 0.5rem; text-decoration: line-through\">" + content + "</span></div>");
+            else
+                checklistItem.append("<div><i class=\"far fa-circle\" style=\"color: #ffc107;\" onclick=\"onClickChecklist(this, " + checklistId + ")\"></i><span style=\"margin-left: 0.5rem;\">" + content + "</span></div>");
+
+            let option = $("<div></div>");
+            option.append("<i class=\"fas fa-times\" style=\"color: darkgray; cursor: pointer; visibility: hidden;\" onclick=\"onClickDeleteChecklist(this, " + checklistId + ")\"></i>");
+            checklistItem.append(option);
+            checklistItem.hover(function() {
+                option.children('i').css('visibility', 'visible');
+            }, function() {
+                option.children('i').css('visibility', 'hidden');
+            });
+            parent.append(checklistItem);
+        } else if(worker) {
+            let checklistItem = $("<div class=\"checklist-item\" id='checklist-" + checklistId + "' style='display: flex; justify-content: space-between; margin-right: 1.5rem; cursor: pointer'>");
+            if(strikeout)
+                checklistItem.append("<div><i class=\"far fa-check-circle\" style=\"color: #ffc107;\" onclick=\"onClickChecklist(this, " + checklistId + ")\"></i><span style=\"margin-left: 0.5rem; text-decoration: line-through\">" + content + "</span></div>");
+            else
+                checklistItem.append("<div><i class=\"far fa-circle\" style=\"color: #ffc107;\" onclick=\"onClickChecklist(this, " + checklistId + ")\"></i><span style=\"margin-left: 0.5rem;\">" + content + "</span></div>");
+            parent.append(checklistItem);
+        } else {
+            let checklistItem = $("<div class=\"checklist-item\" id='checklist-" + checklistId + "' style='display: flex; justify-content: space-between; margin-right: 1.5rem;'>");
+            if(strikeout)
+                checklistItem.append("<div><i class=\"far fa-check-circle\" style=\"color: #ffc107;\"></i><span style=\"margin-left: 0.5rem; text-decoration: line-through\">" + content + "</span></div>");
+            else
+                checklistItem.append("<div><i class=\"far fa-circle\" style=\"color: #ffc107;\"></i><span style=\"margin-left: 0.5rem;\">" + content + "</span></div>");
+
+            parent.append(checklistItem);
+        }
+    }
+    function onClickDeleteChecklist(obj, checklistId) {
+        jQuery.ajax({
+            url: '/taskboard/deleteChecklist',
+            type: 'post',
+            data: {
+                userId: <%= session[:user]['id'] %>,
+                taskId: selectedTask.id,
+                checklistId: checklistId
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $('#checklist-' + checklistId).remove();
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function confirmChecklist(obj) {
+        console.log('confirmChecklist checklist = ' + $(obj).val());
+
+        const checklist = $(obj).parent().parent();
+        const addChecklistTag = $("<div style=\"font-size: 1rem; color: #4131c3; margin: 15px; cursor: pointer;\" onclick=\"onClickAddChecklist(this)\"><i class=\"fas fa-plus\"></i><span style=\"margin-left: 0.5rem;\">체크리스트 추가</span></div>");
+        const content = $(obj).val();
+        if(content.length > 0) {
+            jQuery.ajax({
+                url: '/taskboard/createChecklist',
+                type: 'post',
+                data: {
+                    userId: <%= session[:user]['id'] %>,
+                    taskId: selectedTask.id,
+                    content: content
+                },
+                success: function(data) {
+                    console.log(data);
+                    $(obj).parent().remove();
+                    if(data.result == true) {
+                        var checklistItem = $("<div class=\"checklist-item\" id='checklist-" + data.checklist.id + "' style='display: flex; justify-content: space-between; margin-right: 1.5rem;'>");
+                        var content = $("<div></div>");
+                        content.append("<i class=\"far fa-circle\" style=\"color: #ffc107;\" onclick=\"onClickChecklist(this, " + data.checklist.id + ")\"></i><span style=\"margin-left: 0.5rem;\">" + data.checklist.content + "</span>");
+                        checklistItem.append(content);
+                        var option = $("<div></div>");
+                        option.append("<i class=\"fas fa-times\" style=\"color: darkgray; cursor: pointer; visibility: hidden;\" onclick=\"onClickDeleteChecklist(this, " + data.checklist.id + ")\"></i>");
+                        checklistItem.append(option);
+                        checklistItem.hover(function() {
+                            option.children('i').css('visibility', 'visible');
+                        }, function() {
+                            option.children('i').css('visibility', 'hidden');
+                        });
+                        checklist.append(checklistItem);
+                        checklist.append(addChecklistTag);
+                        enableModalChecklist = false;
+                    } else {
+                        console.error('error occured ', data.message);
+                        checklist.append(addChecklistTag);
+                        enableModalChecklist = false;
+                    }
+                },
+                error: function(request, status, error) {
+                    console.error("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        } else {
+            $(obj).parent().remove();
+            checklist.append(addChecklistTag);
+            enableModalChecklist = false;
+        }
+    }
+    function onClickCalendar(obj) {
+        $('#modal-foreverCalendar').children('.modal-dialog').css('top', event.clientY);
+        $('#modal-foreverCalendar').children('.modal-dialog').css('left', event.clientX);
+        $('#modal-foreverCalendar').modal('toggle');
+    }
+    function onClickTimepickerSave(obj) {
+        if(pickedDate.picked == true) {
+            var pickedTime = $('#timepicker').children('button').text().split(' ');
+            pickedDate.hour = pickedTime[0].split(':')[0];
+            pickedDate.minute = pickedTime[0].split(':')[1];
+            pickedDate.ampm = pickedTime[1];
+            console.log(pickedDate);
+            var dday = pickedDate.year + '-' + pickedDate.month + '-' + pickedDate.day + '-' + pickedDate.hour + '-' + pickedDate.minute + '-' + pickedDate.ampm;
+
+            if(selectedTask) {
+                jQuery.ajax({
+                    url: '/taskboard/modifyDday',
+                    type: 'post',
+                    data: {
+                        taskId: selectedTask.id,
+                        dday: dday
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            selectedTask.dday = data.dday;
+                            dday = data.dday.split('-');
+                            console.log('success dday = ' + dday);
+                            // $('#d-day').text('마감일: ' + pickedDate.month + '월' + ' ' + pickedDate.day + '일' + ' ' + pickedDate.hour + ':' + pickedDate.minute + ' ' + pickedDate.ampm);
+                            $('#d-day').text(' <%= t('application.d-day') %>: ' + dday[1] + '<%= t('application.month') %>' + ' ' + dday[2] + '<%= t('application.day') %>');
+                            $('#d-day').prepend("<i class=\"fas fa-calendar-alt\"></i>");
+
+                            let calendarIcon = $('#task-' + selectedTask.id).find('.fa-calendar-alt');
+                            if(calendarIcon.length > 0) {
+                                let parent = calendarIcon.parent();
+                                parent.text(dday[1] + '<%= t('application.month') %> ' + dday[2] + '<%= t('application.day') %>');
+                                parent.prepend("<i class=\"fas fa-calendar-alt\"></i>");
+                            }
+
+                            $('#modal-foreverCalendar').modal('toggle');
+                            // $('#modal-foreverCalendar').removeClass('fade-in').addClass('fade-out');
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+            } else {
+                $('#d-day').text(' <%= t('application.d-day') %>: ' + pickedDate.month + '<%= t('application.month') %>' + ' ' + pickedDate.day + '<%= t('application.day') %>');
+                $('#d-day').prepend("<i class=\"fas fa-calendar-alt\"></i>");
+                $('#modal-foreverCalendar').modal('toggle');
+            }
+        }
+    }
+    function onClickWhatList(obj) {
+        var i = $(obj).children().last().children();
+        if(i.hasClass('display-none')) {
+            i.removeClass('display-none');
+        } else {
+            i.addClass('display-none');
+        }
+    }
+    function onClickMemberList(obj, kind, memberId) {
+        var i = $(obj).children().last().children();
+        console.log('onClickMemberlist kind = ' + kind);
+        if(i.hasClass('display-none')) {
+            i.removeClass('display-none');
+            var url = null;
+            if(kind == 'worker') url = '/taskboard/assignedWorker';
+            else if(kind == 'watcher') url = '/taskboard/assignedWatcher'
+            jQuery.ajax({
+                url: url,
+                type: 'post',
+                data: {
+                    taskId: selectedTask.id,
+                    memberId: memberId
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        if(kind == 'worker') {
+                            var workerlist = $('#worker-list');
+                            workerlist.append("<span class=\"name-tag\">" + data.worker.name + "</span>");
+                        } else if(kind == 'watcher') {
+                            var watcherlist = $('#watcher-list');
+                            watcherlist.append("<span class=\"name-tag\">" + data.watcher.name + "</span>");
+                        }
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        }else {
+            i.addClass('display-none');
+            var url = null;
+            if(kind == 'worker') url = '/taskboard/unassignedWorker';
+            else if(kind == 'watcher') url = '/taskboard/unassignedWatcher'
+            jQuery.ajax({
+                url: url,
+                type: 'post',
+                data: {
+                    taskId: selectedTask.id,
+                    memberId: memberId
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        if(data.unassigned == true) {
+                            if(kind == 'worker') {
+                                var workerlist = $('#worker-list').children();
+                                workerlist.each(function () {
+                                    console.log($(this).text());
+                                    if($(this).text() == data.name)
+                                        $(this).remove();
+                                });
+                            } else if(kind == 'watcher') {
+                                var watcherlist = $('#watcher-list').children();
+                                watcherlist.each(function () {
+                                    console.log($(this).text());
+                                    if($(this).text() == data.name)
+                                        $(this).remove();
+                                });
+                            }
+                        }
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        }
+    }
+    function onClickTagList(obj, tagId) {
+        var i = $(obj).children().last().children();
+        if(i.hasClass('display-none')) {
+            i.removeClass('display-none');
+            jQuery.ajax({
+                url: '/taskboard/attachTag',
+                type: 'post',
+                data: {
+                    taskId: selectedTask.id,
+                    tagId: tagId
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        if(data.attached == true) {
+                            var taglist = $('#tag-list');
+                            taglist.append(" <div class=\"p-tag\" style='background-color: " + data.tag.color + "; --tagBackground: white; --borderRight: 10px solid " + data.tag.color + "'>" + data.tag.name + "</div>");
+                        }
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        } else {
+            i.addClass('display-none');
+            jQuery.ajax({
+                url: '/taskboard/detachTag',
+                type: 'post',
+                data: {
+                    taskId: selectedTask.id,
+                    tagId: tagId
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        if(data.detached == true) {
+                            var taglist = $('#tag-list').children();
+                            taglist.each(function () {
+                                if($(this).text() == data.tag.name) {
+                                    console.log('tag-list ' + $(this).text());
+                                    $(this).remove();
+                                }
+                            });
+                        }
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        }
+    }
+    function onClickModalTaskTitle(obj) {
+        replaceModalTaskTitle($(obj), 100);
+    }
+    function renameTaskTitle(task, newTitle, post) {
+        jQuery.ajax({
+            url: '/taskboard/renameTaskTitle',
+            type: 'post',
+            data: {
+                taskId: task.id,
+                title: newTitle
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    post(data.title);
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function replaceModalTaskTitle(obj, delay) {
+        var inputTitle = $("<input type='text' class='form-control' name='modal-title' placeholder='<%= t('dashboard.please_input_title') %>'>");
+        inputTitle.val(obj.text());
+        inputTitle.keypress(function (e) {
+            if(e.which == 13) {//press enter key
+                var title = $(this).val();
+                if(title) {
+                    console.log('title = ' + title);
+                    if(selectedTask) {
+                        renameTaskTitle(selectedTask, title, function (s) {
+                            inputTitle.replaceWith("<div id=\"modal-title\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalTaskTitle(this)\">" + s + "</div>");
+                            selectedTask.title = s;
+                            enableModalTitle = false;
+                            $('#task-' + selectedTask.id).children().first().children().first('h5').text(selectedTask.title);
+                        });
+                    } else {
+                        inputTitle.replaceWith("<div id=\"modal-title\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalTaskTitle(this)\">" + title + "</div>");
+                        enableModalTitle = false;
+                    }
+                }
+            }
+        });
+        obj.replaceWith(inputTitle);
+        setTimeout(function () {
+            $("input[name='modal-title']").focus();
+            enableModalTitle = true;
+        }, delay);
+    }
+    function onClickModalDesc(obj) {
+        replaceModalDesc($(obj), 100);
+    }
+    function renameTaskDesc(task, newDesc, post) {
+        jQuery.ajax({
+            url: '/taskboard/renameTaskDesc',
+            type: 'post',
+            data: {
+                taskId: task.id,
+                desc: newDesc
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    post(data.desc);
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function replaceModalDesc(obj, delay) {
+        var inputDesc = $("<input type='text' class='form-control form-control-sm' name='modal-desc' placeholder='설명을 입력하세요'>");
+        inputDesc.val(obj.text());
+        inputDesc.keypress(function (e) {
+            if(e.which == 13) {//press enter key
+                var desc = $(this).val();
+                console.log('desc = ' + desc);
+                if(selectedTask) {
+                    renameTaskDesc(selectedTask, desc, function (s) {
+                        inputDesc.replaceWith("<div id=\"modal-desc\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalDesc(this)\">" + s + "</div >");
+                        enableModalDesc = false;
+                        selectedTask.desc = s;
+                    });
+                } else {
+                    inputDesc.replaceWith("<div id=\"modal-desc\" style=\"cursor: pointer; color: dimgray;\" onclick=\"onClickModalDesc(this)\">" + desc + "</div >");
+                    enableModalDesc = false;
+                }
+            }
+        });
+        obj.replaceWith(inputDesc);
+        setTimeout(function () {
+            $("input[name='modal-desc']").focus();
+            enableModalDesc = true;
+        }, delay);
+    }
+    function onClickDeleteTask(obj, taskId) {
+        console.log('onClickDeleteTask taskId = ' + taskId);
+        // $(obj).attr("disabled", true);
+        $('#confirmModal').modal('toggle');
+    }
+    function confirmDeleteTask(obj, taskId) {
+        console.log('confirmDeleteTask taskId = ' + taskId);
+        $(obj).attr('disabled', true);
+        $(obj).text(' ' + $(obj).text());
+        $(obj).prepend("<span class=\"spinner-border spinner-border-sm\" role=\"status\" aria-hidden=\"true\"></span>");
+
+        jQuery.ajax({
+            url: '/taskboard/deleteTask',
+            type: 'post',
+            data: {
+                userId: <%= session[:user]['id'] %>,
+                taskId: taskId
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    if(data.attachments.length > 0) {//Attachment 있을 경우 firebase에서 삭제해야 함
+                        data.attachments.forEach(attachment => {
+                            firebase.storage().ref('images/task/' + taskId + '/').child('thumb_' + attachment).delete().then(() => {
+                                console.log('thumb_' + attachment + ' deleted successfully');
+                            });
+                            firebase.storage().ref('images/task/' + taskId + '/').child(attachment).delete().then(() => {
+                                console.log(attachment + ' deleted successfully');
+                            })
+                        })
+                    }
+                    setTimeout(() => {
+                        $('#confirmModal').modal('toggle');
+                        setTimeout(() => {
+                            $('#modal-viewTask').modal('toggle');
+                            $('#task-' + taskId).remove();
+                        }, 100);
+                    }, 1000);
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function onClickFinishTask(taskId) {
+        // $(obj).attr("disabled", true);
+        console.log('completed task');
+        jQuery.ajax({
+            url: '/taskboard/finishTask',
+            type: 'post',
+            data: {
+                userId: <%= session[:user]['id'] %>,
+                taskId: taskId
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function addTag(obj, projectId) {
+        var tagName = $("input[name='tag-name']").val();
+        console.log('tagName = ' + tagName + ', color = ' + selectedColor);
+
+        jQuery.ajax({
+            url: '/taskboard/addTag',
+            type: 'post',
+            data: {
+                userId: <%= session[:user]['id'] %>,
+                projectId: projectId,
+                name: tagName,
+                color: selectedColor
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $('#modal-colorpicker').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function replaceModifyComment(commentId, content) {
+        $("input[name='modify-comment']").prev().children('.tbutton-sm').each(function() {
+            if($(this).text() == '수정') $(this).attr('onclick', 'onClickModifyComment(this, ' + commentId + ')');
+            else if($(this).text() == '삭제') $(this).attr('onclick', 'onClickDeleteComment(this, ' + commentId + ')');
+            $(this).css('cursor', 'pointer');
+        });
+        $("input[name='modify-comment']").next().remove();
+        $("input[name='modify-comment']").replaceWith("<div class='comment-bubble'>" + content + "</div>");
+    }
+    function onClickConfirmComment(confirm, commentId) {
+        if(confirm) {
+            var content = $("input[name='modify-comment']").val();
+            if(content) {
+                jQuery.ajax({
+                    url: '/taskboard/modifyComment',
+                    type: 'post',
+                    data: {
+                        commentId: commentId,
+                        content: content
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        if(data.result == true) {
+                            replaceModifyComment(data.comment.id, data.comment.content);
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+            }
+        } else {
+            replaceModifyComment(commentId, beforeModifyComment);
+        }
+    }
+    function onClickModifyComment(obj, commentId) {
+        var element = $('#comment-' + commentId).children().last().children().last();
+        beforeModifyComment = element.text();
+        var parent = element.parent();
+        var inputComment = $("<input type='text' class='form-control' name='modify-comment' placeholder='댓글을 입력하세요'>");
+        inputComment.val(beforeModifyComment);
+        setTimeout(function () { inputComment.focus();}, 200);
+        element.replaceWith(inputComment);
+        var buttonArea = $("<div style='display: flex; flex-direction: row-reverse; margin-top: 0.4rem;'></div>");
+        var confirmButton = $("<button type='button' class='btn btn-warning btn-sm' style='margin-left: 0.3rem' onclick='onClickConfirmComment(true, " + commentId + ")'>수정</button>");
+        buttonArea.append(confirmButton);
+        buttonArea.append("<button type='button' class='btn btn-secondary btn-sm' onclick='onClickConfirmComment(false, " + commentId + ")'>취소</button>");
+        parent.append(buttonArea);
+        $(obj).parent().children('.tbutton-sm').each(function() {
+            $(this).attr('onclick', null);
+            $(this).css('cursor', 'auto');
+        });
+        $("input[name='modify-comment']").on('change keyup paste', function () {
+            var content = $(this).val();
+            if(content.length > 0)
+                confirmButton.attr('disabled', false);
+            else
+                confirmButton.attr('disabled', true);
+        });
+    }
+    function confirmDeleteComment(commentId) {
+        jQuery.ajax({
+            url: '/taskboard/deleteComment',
+            type: 'post',
+            data: {
+                taskId: selectedTask.id,
+                commentId: commentId
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $('#comment-' + commentId).next('hr').remove();
+                    $('#comment-' + commentId).remove();
+                    $('#confirmModal').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function addComment(userId, userName, avatar_url, comment) {
+        var commentItem = $("<div id=\"comment-" + comment.id + "\" style=\"display: flex;\">");
+        if(avatar_url == null)
+            avatar_url = "/defaultprofile.png";
+        commentItem.append("<img style=\"width: 50px; height: 50px; margin-right: 1rem; border-radius: 0.3rem; border: 1px solid lightgray;\" src=\"" + avatar_url + "\" />");
+        var contentArea = $("<div style='display: flex; flex-direction: column;'></div>");
+        var infoArea = $("<div style='display: flex; align-items: baseline;'></div>");
+        infoArea.append("<div style='margin-bottom: 0.25rem; margin-right: 0.5rem; font-weight: bold;'>" + userName + "</div>");
+
+        <% if session[:logined] %>
+        if('<%= session[:user]['id'] %>' == userId) {
+            infoArea.append("<div class='tbutton-sm' style='margin-right: 0.5rem' onclick='onClickModifyComment(this, " + comment.id + ")'>수정</div>");
+            infoArea.append("<div class='tbutton-sm' style='margin-right: 0.5rem' data-toggle='modal' data-kind='deleteComment' data-commentid='" + comment.id + "' data-target='#confirmModal'>삭제</div>");
+        }
+        <% end %>
+        infoArea.append("<div style='font-size: 0.8rem; color: darkgray;'>" + getDateString(new Date(comment.updated_at)) + "</div>");
+        contentArea.append(infoArea);
+        contentArea.append("<div class='comment-bubble'>" + comment.content + "</div>");
+        commentItem.append(contentArea);
+        return commentItem;
+    }
+    function onClickComment(obj) {
+        console.log('onClickComment selectedTaskId = ' + selectedTask.id);
+        var content = $("textarea[name='textarea-comment']").val();
+        if(content) {
+            $(obj).attr('disabled', true);
+            $(obj).text(' ' + $(obj).text());
+            $(obj).prepend("<span class=\"spinner-border spinner-border-sm\" role=\"status\" aria-hidden=\"true\"></span>");
+            jQuery.ajax({
+                url: '/taskboard/createComment',
+                type: 'post',
+                data: {
+                    userId: <%= session[:user]['id'] %>,
+                    taskId: selectedTask.id,
+                    content: content
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        let commentItem = addComment(data.userId, data.userName, data.avatar, data.comment);
+                        taskCommentReader.offset++;
+                        $('#comment-list').prepend('<hr>');
+                        $('#comment-list').prepend(commentItem);
+                        $("textarea[name='textarea-comment']").val('');
+                        $(obj).children('span').remove();
+                        $(obj).attr('disabled', false);
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        }
+    }
+    function readComments(taskId) {
+        console.log(`reader.offset=${taskCommentReader.offset}, comment_count=${selectedTask.comment_count}`);
+        if(readingComments === false && taskCommentReader.offset < selectedTask.comment_count) {
+            readingComments = true;
+            jQuery.ajax({
+                url: '/taskboard/readComments',
+                type: 'post',
+                data: {
+                    taskId: taskId,
+                    offset: taskCommentReader.offset,
+                    count: taskCommentReader.count
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        for(let i=0; i<data.comments.length; i++) {
+                            let commentItem = addComment(data.comments[i].userId, data.comments[i].name, data.comments[i].avatar, data.comments[i].comment);
+                            $('#comment-list').append('<hr>');
+                            $('#comment-list').append(commentItem);
+                        }
+                        taskCommentReader.offset += data.comments.length;
+                        readingComments = false;
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        }
+    }
+    function addHistory(userName, history) {
+        var historyItem = $("<div id='history-'" + history.id + " style='display: flex; color: rgba(0, 0, 0, 0.6)'>");
+
+        var historyKind = historyKinds[history.kind];
+
+        var fontawsome = null;
+        if(historyKind == 'comment') fontawsome = 'far fa-comment';
+        else if(historyKind == 'checklist') fontawsome = 'far fa-check-circle';
+        else if(historyKind == 'calendar') fontawsome = 'fas fa-calendar-alt';
+        else if(historyKind == 'worker') fontawsome = 'far fa-user';
+        else if(historyKind == 'attachment') fontawsome = 'far fa-image';
+        else if(historyKind == 'task') fontawsome = 'fas fa-check-circle';
+
+        historyItem.append("<div style='width: 50px; height: 50px; margin-right: 1rem; border-radius: 0.3rem; border: 1px solid transparent;'><i class='" + fontawsome + "' style='font-size: 3rem;'></i></div>");
+        var contentArea = $("<div style='display: flex; flex-direction: column;'></div>");
+        var infoArea = $("<div style='display: flex; align-items: baseline;'></div>");
+        history_attrs = {'0': '<%= t('dashboard.write') %>', '1': '<%= t('dashboard.modify') %>', '2': '<%= t('dashboard.delete') %>', '3': '<%= t('dashboard.assign') %>', '4': '<%= t('dashboard.unassign') %>', '5': '<%= t('application.completed') %>'};
+
+        if(historyKind == 'comment') {
+            infoArea.append("<div style='margin-bottom: 0.25rem; margin-right: 0.5rem; font-weight: bold; font-size: 0.8rem;'><span style='color: black;'>" + userName + "</span>님 코멘트 " + history_attrs[history.attr.toString()] + "하였습니다.</div>");
+            infoArea.append("<div style='font-size: 0.8rem;'>" + getDateString(new Date(history.updated_at)) + "</div>");
+            contentArea.append(infoArea);
+            contentArea.append("<div class='comment-bubble'>" + history.content + "</div>");
+        } else if(historyKind == 'checklist') {
+            // infoArea.append("<div style='margin-bottom: 0.25rem; margin-right: 0.5rem; font-weight: bold; font-size: 0.8rem;'>" + userName + "님 체크리스트 " + history_attrs[history.attr.toString()] + "하였습니다.</div>");
+            infoArea.append("<div style='margin-bottom: 0.25rem; margin-right: 0.5rem; font-weight: bold; font-size: 0.8rem;'><span style='color: black;'>" + userName + "</span>님 체크리스트 " + history_attrs[history.attr.toString()] + "하였습니다.</div>");
+            infoArea.append("<div style='font-size: 0.8rem;'>" + getDateString(new Date(history.updated_at)) + "</div>");
+            contentArea.append(infoArea);
+            if(history_attrs[history.attr.toString()] == '수정')
+                contentArea.append("<div><i class=\"far fa-check-circle\" style=\"color: #ffc107;\"></i><span style=\"margin-left: 0.5rem; text-decoration: line-through\">" + history.content + "</span></div>");
+            else
+                contentArea.append("<div><i class=\"far fa-check-circle\" style=\"color: #ffc107;\"></i><span style=\"margin-left: 0.5rem\">" + history.content + "</span></div>");
+        } else if(historyKind == 'calendar') {
+            infoArea.append("<div style='margin-bottom: 0.25rem; margin-right: 0.5rem; font-weight: bold; font-size: 0.8rem;'><span style='color: black;'>" + userName + "</span>님 마감일을 " + history_attrs[history.attr.toString()] + "하였습니다.</div>");
+            infoArea.append("<div style='font-size: 0.8rem;'>" + getDateString(new Date(history.updated_at)) + "</div>");
+            contentArea.append(infoArea);
+            var content = history.content.split('-');
+            contentArea.append("<div>" + content[0] + '년 ' + content[1] + '월 ' + content[2] + '일' + "</div>");
+        } else if(historyKind == 'worker') {
+            infoArea.append("<div style='margin-bottom: 0.25rem; margin-right: 0.5rem; font-weight: bold; font-size: 0.8rem;'><span style='color: black;'>" + userName + "</span>님 작업자를 " + history_attrs[history.attr.toString()] + "하였습니다.</div>");
+            infoArea.append("<div style='font-size: 0.8rem;'>" + getDateString(new Date(history.updated_at)) + "</div>");
+            contentArea.append(infoArea);
+            contentArea.append("<div>" + history.content + "</div>");
+        } else if(historyKind == 'attachment') {
+            infoArea.append("<div style='margin-bottom: 0.25rem; margin-right: 0.5rem; font-weight: bold; font-size: 0.8rem;'><span style='color: black;'>" + userName + "</span>님 이미지를 " + history_attrs[history.attr.toString()] + "하였습니다.</div>");
+            infoArea.append("<div style='font-size: 0.8rem;'>" + getDateString(new Date(history.updated_at)) + "</div>");
+            contentArea.append(infoArea);
+            let splitedContent = history.content.split('/');
+            let content = splitedContent[0].split('_');
+            content = content[content.length-2];
+            if(splitedContent[1] > 1) {
+                content += ' 외 ' + (splitedContent[1]-1) + '개를 ' + history_attrs[history.attr.toString()] + ' 하였습니다';
+            } else {
+                content += '를 ' + history_attrs[history.attr.toString()] + ' 하였습니다.';
+            }
+            contentArea.append("<div>" + content + "</div>");
+        } else if(historyKind == 'task') {
+            let historyAttr = history_attrs[history.attr.toString()];
+            infoArea.append("<div style='margin-bottom: 0.25rem; margin-right: 0.5rem; font-weight: bold; font-size: 0.8rem;'><span style='color: black;'>" + userName + "</span>님 테스크를 " + historyAttr + "하였습니다.</div>");
+            infoArea.append("<div style='font-size: 0.8rem;'>" + getDateString(new Date(history.updated_at)) + "</div>");
+            contentArea.append(infoArea);
+            if(historyAttr == "<%= t('dashboard.write') %>") {
+                contentArea.append("<div>" + "<%= t('dashboard.created_task') %>" + "</div>");
+            } else if(historyAttr == "<%= t('application.completed') %>") {
+                contentArea.append("<div>" + "<%= t('dashboard.completed_task') %>" + "</div>");
+            }
+        }
+        historyItem.append(contentArea);
+        return historyItem;
+        // parent.append(historyItem);
+        // parent.append("<hr>");
+        // parent.prepend("<hr>");
+        // parent.prepend(historyItem);
+    }
+    function readHistories(taskId) {
+        console.log(`reader.offset=${taskHistoryReader.offset}, history_count=${selectedTask.history_count}`);
+        if(readingHistories === false && taskHistoryReader.offset < selectedTask.history_count) {
+            readingHistories = true;
+            jQuery.ajax({
+                url: '/taskboard/readHistories',
+                type: 'post',
+                data: {
+                    taskId: taskId,
+                    offset: taskHistoryReader.offset,
+                    count: taskHistoryReader.count
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.result == true) {
+                        for(let i=0; i<data.histories.length; i++) {
+                            let historyItem = addHistory(data.histories[i].name, data.histories[i].history);
+                            $('#history-list').append(historyItem);
+                            $('#history-list').append("<hr>");
+                        }
+                        taskHistoryReader.offset += data.histories.length;
+                        readingHistories = false;
+                    } else {
+                    }
+                },
+                error: function(request, status, error) {
+                    console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                }
+            });
+        }
+    }
+    function uploadAttachments(attachments) {
+        $.ajax({
+            url: '/taskboard/createAttachments',
+            type: 'post',
+            data: {
+                userId: <%= session[:user]['id'] %>,
+                taskId: selectedTask.id,
+                attachments: attachments
+            },
+            success: function(data) {
+                if(data.result == true) {
+                    if(data.appendedAttachments.length > 0) {
+                        taskAttachments = new Array();
+                        data.appendedAttachments.forEach(attachment => {
+                            taskAttachments.push(attachment);
+                            appendAttachmentTo(taskAttachments.length-1, $('#attachment-list'), true);
+                        })
+                    }
+                } else {
+                    console.log('result =', data.result);
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function confirmTaskProgress(obj) {
+        console.log('confirmTaskProgress object =', $(obj));
+        let progressValue = $(obj).val();
+        $.ajax({
+            url: '/taskboard/updateProgress',
+            type: 'post',
+            data: {
+                userId: <%= session[:user]['id'] %>,
+                taskId: selectedTask.id,
+                progress: progressValue
+            },
+            success: function(data) {
+                if(data.result == true) {
+                    selectedTask.progress = data.progress;
+                    let progressArea = $('#progress-area');
+                    progressArea.children('div').first().text = selectedTask.progress + '%';
+                    let progressBar = progressArea.children('.progress').children().first();
+                    progressArea.children('div').first().text('<%= t('application.task-progress') %>: ' + selectedTask.progress.toString() + '%');
+                    progressBar.css('width', selectedTask.progress.toString() + '%');
+                    progressBar.attr('aria-valuenow', selectedTask.progress.toString());
+
+                    let taskElement = $('#task-' + selectedTask.id);
+                    console.log('taskElement =', taskElement);
+                    if( taskElement !== undefined) {
+                        progressBar = taskElement.children('.progress').last().children().last();
+                        progressBar.css('width', selectedTask.progress.toString() + '%');
+                        progressBar.attr('aria-valuenow', selectedTask.progress.toString());
+                    }
+
+                    $('#modal-progress').modal('hide');
+                } else {
+                    console.log('result =', data.result);
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    <% end %>
+  </script>
+
+  <body onresize="resizeBody();">
+    <nav class="navbar fixed-top navbar-expand-lg navbar-dark bg-dark">
+      <a class="navbar-brand" style="color: <%= @primaryColor %>;" href="javascript:void(0)" onclick="onClicHome()"><%= t('navbar.daldalTask') %></a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+          <% if session[:logined] %>
+          <li class="nav-item">
+            <a class="nav-link" href="javascript:void(0)" onclick="window.location='/dashboard/dashboard'"><%= t('navbar.dashboard') %><span class="sr-only">(current)</span></a>
+          </li>
+          <% if (@request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView') and (@dropdownMyProjects or @dropdownBelongToProjects) %>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="dropdownProjects" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <%= @project.title %>
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                <% @dropdownMyProjects.each do |project| %>
+                  <a class="dropdown-item" href="javascript:void(0)" onclick="window.location='/taskboard/taskboard?projectId=<%= project.id %>'"><%= project.title %></a>
+                <% end %>
+                <div class="dropdown-divider"></div>
+                <% @dropdownBelongToProjects.each do |project| %>
+                  <a class="dropdown-item" href="javascript:void(0)" onclick="window.location='/taskboard/taskboard?projectId=<%= project.id %>'"><%= project.title %></a>
+                <% end %>
+              </div>
+            </li>
+          <% end %><%# if @request_url == 'taskboard' and (@dropdownMyProjects or @dropdownBelongToProjects) %>
+          <% if @editor %>
+            <li class="nav-item">
+              <a class="nav-link" data-toggle="modal" data-projectid="<%= @project.id %>" href="#modal-modifyProject"><i class="fas fa-info-circle"></i><span class="sr-only">(current)</span></a>
+            </li>
+          <% end %><%# if @editor %>
+          <% end %>
+          <% if @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+            <li class="nav-item">
+              <a class="nav-link" href="javascript:void(0)" onclick="window.location='/taskboard/taskboard?projectId=<%= @project.id %>'" ><%= t('navbar.taskboard') %></a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="javascript:void(0)" onclick="window.location='/calendarview/calendarView?projectId=<%= @project.id %>'" ><%= t('navbar.calendarview') %></a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="javascript:void(0)" onclick="window.location='/tableview/tableView?projectId=<%= @project.id %>'" ><%= t('navbar.tableview') %></a>
+            </li>
+          <% end %><%# if @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+<!--          <li class="nav-item">-->
+<!--            <a class="nav-link" href="#">Link</a>-->
+<!--          </li>-->
+        </ul>
+        <form class="form-inline my-2 my-lg-0">
+          <% if session[:logined] %>
+            <button id="logout-button" class="btn btn-outline-warning my-2 my-sm-0" type="button" style="margin-right: 5px" onclick="location.href='/user/logout'"><%= t('navbar.signout') %></button>
+            <div id="welcome-user" style="color: white"><%= t('navbar.welcome', name: session[:user]['name']) %></div>
+            <!--            <a id="myinfo-link" class="nav-link" href="/user/mybike" 이렇게 하면 document.ready가 호출되지않는다!!! style="color: #45dd52; padding: 8px">나의바이크</a> -->
+            <a id="myinfo-link" class="nav-link" style="color: <%= @primaryColor %>" href="javascript:void(0)" onclick="window.location='/user/myinfo/'" style="color: #45dd52; padding: 8px"><%= t('navbar.myinfo') %></a>
+          <% else %>
+            <button id="signup-button" class="btn btn-outline-warning my-2 my-sm-0" type="button" style="margin-right: 5px" onclick="window.location='/user/new'"><%= t('navbar.signup') %></button>
+            <button id="login-button" class="btn btn-outline-warning my-2 my-sm-0" type="button" onclick="window.location='/user/login'"><%= t('navbar.signin') %></button>
+            <button id="logout-button" class="btn btn-outline-warning my-2 my-sm-0" type="button" style="display: none; margin-right: 5px" onclick="window.location='/user/logout'"><%= t('navbar.signout') %></button>
+          <% end %>
+        </form>
+      </div>
+    </nav>
+    <img id="beta-image" width="30" height="12" src="/beta.jpg" style="position: fixed; left: 0; top: 7px; z-index: 1031; transform: rotate(-45deg)"/>
+    <%= yield %>
+
+    <% if @request_url == 'dashboard' or @request_url == 'taskboard' or @request_url == 'calendarView' or @request_url == 'tableView' %>
+    <div class="modal fade" id="modal-viewTask" tabindex="-1" role="dialog" aria-labelledby="viewTaskModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content <%= @mobileDevice ? 'animate-bottom' : '' %>">
+          <div class="modal-header">
+            <div style="display: flex; flex-direction: column; min-width: 60%;">
+              <div id="modal-title" style="cursor: pointer; color: dimgray;" onclick="onClickModalTaskTitle(this)"><%= t('dashboard.please_input_title') %></div>
+              <div id="modal-desc" style="cursor: pointer; color: dimgray;" onclick="onClickModalDesc(this)"><%= t('dashboard.please_input_desc') %></div>
+            </div>
+            <div style="display: flex;">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal" style="margin-right: 0.25rem;"><%= t('application.close') %></button>
+              <button type="button" class="btn btn-warning"><%= t('application.apply') %></button>
+            </div>
+          </div>
+          <div class="modal-body">
+            <!--        <hr>-->
+            <% if @mobileDevice %>
+            <div style="display: flex; flex-direction: column">
+              <div id="checklist-area" style="display: flex; flex-direction: column; flex-basis: 65%; margin-left: 10px; font-size: <%= @mobileDevice ? '1rem' : '1.15rem' %>; color: dimgray;">
+                <%= t('application.checklist') %>
+                <div style="font-size: 1rem; color: #4131c3; margin: 15px; cursor: pointer;" onclick="onClickAddChecklist(this)"><i class="fas fa-plus"></i><span style="margin-left: 0.5rem;"><%= t('application.add_checklist') %></span></div>
+              </div>
+              <div style="flex-basis: 5%; border-left: 1px solid rgba(0, 0, 0, 0.1); margin: 5px;"></div>
+              <div style="display: flex; flex-direction: column; margin-bottom: 1rem">
+                <div>
+                  <span id="d-day" style='font-size: 1rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px; cursor: pointer;' onclick="onClickCalendar(this)"><i class="fas fa-calendar-alt"></i> 마감일: 1월12일</span>
+                  <hr>
+                </div>
+                <div id="worker-area" style="color: dimgray;">
+                  <div style="cursor: pointer;" data-toggle="modal" data-kind="worker" data-target="#modal-whatList"><i class="fas fa-asterisk"></i> <%= t('application.worker') %>: </div>
+                  <div id="worker-list">
+                  </div>
+                  <hr>
+                </div>
+                <div id="watcher-area" style="color: dimgray;">
+                  <div style="cursor: pointer;" data-toggle="modal" data-kind="watcher" data-target="#modal-whatList"><i class="fas fa-asterisk"></i> <%= t('application.watcher') %>: </div>
+                  <div id="watcher-list">
+                  </div>
+                  <hr>
+                </div>
+                <div id="tag-area" style="color: dimgray;">
+                  <div style="cursor: pointer;" data-toggle="modal" data-kind="tag" data-target="#modal-whatList"><i class="fas fa-tags"></i> <%= t('application.tags') %>: </div>
+                  <div id="tag-list" style="display: flex; flex-wrap: wrap">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <% else %>
+            <div style="display: flex; flex-direction: row">
+              <div id="checklist-area" style="display: flex; flex-direction: column; flex-basis: 65%; margin-left: 10px; font-size: <%= @mobileDevice ? '1rem' : '1.15rem' %>; color: dimgray;">
+                <%= t('application.checklist') %>
+                <div style="font-size: 1rem; color: #4131c3; margin: 15px; cursor: pointer;" onclick="onClickAddChecklist(this)"><i class="fas fa-plus"></i><span style="margin-left: 0.5rem;"><%= t('application.add_checklist') %></span></div>
+              </div>
+              <div style="flex-basis: 5%; border-left: 1px solid rgba(0, 0, 0, 0.1); margin: 5px;"></div>
+              <div style="display: flex; flex-direction: column; flex-basis: 30%;">
+                <div>
+                  <span id="d-day" style='font-size: 1rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px; cursor: pointer;' onclick="onClickCalendar(this)"><i class="fas fa-calendar-alt"></i> 마감일: 1월12일</span>
+                  <hr>
+                </div>
+                <div id="worker-area" style="color: dimgray;">
+                  <div style="cursor: pointer;" data-toggle="modal" data-kind="worker" data-target="#modal-whatList"><i class="fas fa-asterisk"></i> <%= t('application.worker') %>: </div>
+                  <div id="worker-list">
+                  </div>
+                  <hr>
+                </div>
+                <div id="watcher-area" style="color: dimgray;">
+                  <div style="cursor: pointer;" data-toggle="modal" data-kind="watcher" data-target="#modal-whatList"><i class="fas fa-asterisk"></i> <%= t('application.watcher') %>: </div>
+                  <div id="watcher-list">
+                  </div>
+                  <hr>
+                </div>
+                <div id="tag-area" style="color: dimgray;">
+                  <div style="cursor: pointer;" data-toggle="modal" data-kind="tag" data-target="#modal-whatList"><i class="fas fa-tags"></i> <%= t('application.tags') %>: </div>
+                  <div id="tag-list" style="display: flex; flex-wrap: wrap">
+                  </div>
+                </div>
+              </div>
+            </div>
+            <% end %>
+            <div id="progress-area">
+              <div><%= t('application.task-progress') %></div>
+              <div class="progress" style="cursor: pointer;" onclick="clickTaskProgress()">
+                <div class="progress-bar progress-bar-striped bg-warning progress-bar-animated" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"></div>
+              </div>
+            </div>
+            <hr>
+            <div id="images-area">
+              <div style="display: flex">
+                <div style="font-size: 1.15rem; color: dimgray;"><%= t('application.attachment') %></div>
+                <button id="download-all-attachments" type="button" class="btn btn-warning btn-sm" style="margin-left: 0.5rem"><%= t('application.download_all') %></button>
+                <a style="display: none">downloadAllAttachments</a>
+              </div>
+              <div id="attachment-list" style="display: flex; overflow: auto">
+              </div>
+              <a data-toggle="modal" href="#modal-addAttachment" style="margin-left: 0.5rem; color: #4131c3;"><i class="fas fa-plus"></i><span style="margin-left: 0.5rem;"><%= t('application.add_attachment') %></span></a>
+            </div>
+
+            <div id="comment-area" class="form-group" style="margin: 10px 0 0 10px">
+              <label for="comment"><%= t('application.comment') %></label>
+              <textarea class="form-control" name="textarea-comment" id="comment" rows="3" placeholder="<%= t('application.please_input_comment') %>"></textarea>
+              <div style="display: flex; flex-direction: row-reverse; margin-top: 5px; align-items: flex-end">
+                <button id="submit-comment" type="button" class="btn btn-warning btn-sm" onclick="onClickComment(this)"><%= t('application.submit') %></button>
+                <div id="comment-length" style="color: dimgray; margin-right: 0.25rem;">0/1024</div>
+              </div>
+            </div>
+            <!--        <hr>-->
+            <ul class="nav nav-tabs" id="taskview-lower-tab">
+              <li class="nav-item">
+                <a class="nav-link active show" id="tab-commentlist" data-toggle="tab" data-tabid="comment-list" href="#tabpanel-commentlist" role="tab" aria-controls="commentlist" aria-selected="true"><%= t('application.comment') %></a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="tab-historylist" data-toggle="tab" data-tabid="history-list" href="#tabpanel-historylist" role="tab" aria-controls="historylist" aria-selected="false"><%= t('application.history') %></a>
+              </li>
+            </ul>
+            <div class="tab-content" id="myTabContent">
+              <div class="tab-pane fade show active" id="tabpanel-commentlist" role="tabpanel" aria-labelledby="commentlist-tab">
+                <div id="comment-list" style="width: 95%; margin: auto; margin-top: 1rem;">
+                </div>
+              </div>
+              <div class="tab-pane fade" id="tabpanel-historylist" role="tabpanel" aria-labelledby="history-tab">
+                <div id="history-list" style="width: 95%; margin: auto; margin-top: 1rem;">
+                </div>
+              </div>
+            </div>
+          </div>
+          <!--      <div class="modal-footer">-->
+          <!--        <button type="button" class="btn btn-secondary" data-dismiss="modal">취소</button>-->
+          <!--        <button type="button" class="btn btn-warning" onclick="onClickCreateProject()">생성</button>-->
+          <!--      </div>-->
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="modal-modifyProject" tabindex="-1" role="dialog" aria-labelledby="modifyProjectModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header" style="border-bottom: 1px solid transparent; padding-bottom: 0;">
+            <div style="display: flex; flex-direction: column; min-width: 60%;">
+              <div id="modal-title" class="hover-input" style="cursor: pointer; color: dimgray;" onclick="onClickModalProjectTitle(this)"><%= t('dashboard.please_input_title') %></div>
+              <div id="modal-desc" class="hover-input" style="cursor: pointer; color: dimgray;" onclick="onClickModalProjectDesc(this)"><%= t('dashboard.please_input_desc') %></div>
+            </div>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <ul class="nav nav-tabs" id="attr-tab">
+              <li class="nav-item">
+                <a class="nav-link" id="tab-members" data-toggle="tab" data-tabid="member-list" href="#tabpanel-members" role="tab" aria-controls="members" aria-selected="true"><%= t('application.members') %></a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" id="tab-tags" data-toggle="tab" data-tabid="tag-list" href="#tabpanel-tags" role="tab" aria-controls="tags" aria-selected="false"><%= t('application.tags') %></a>
+              </li>
+            </ul>
+            <div class="tab-content" id="myTabContent">
+              <div class="tab-pane fade show active" id="tabpanel-members" role="tabpanel" aria-labelledby="brand-tab">
+                <div style="display: flex; flex-direction: column; align-items: flex-start; min-height: 7rem; background: #f5f5f5; border-radius: 5px; margin-top: 1rem; padding: 0.5rem;"></div>
+                <div>
+                  <a style="text-decoration: none" href="javascript:void(0)" data-toggle="modal" data-target="#modal-addMember"><%= t('dashboard.add_member') %></a>
+                </div>
+              </div>
+              <div class="tab-pane fade" id="tabpanel-tags" role="tabpanel" aria-labelledby="style-tab">
+                <div style="display: flex; flex-wrap: wrap; align-items: flex-start; min-height: 7rem; background: #f5f5f5; border-radius: 5px; margin-top: 1rem; padding: 0.5rem;"></div>
+                <div>
+                  <a style="text-decoration: none" href="javascript:void(0)" data-toggle="modal" data-kind="tag" data-usage="create" data-target="#modal-colorpicker"><%= t('dashboard.add_tag') %></a>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="modal-addMember" tabindex="-1" role="dialog" aria-labelledby="addMemberModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title"><%= t('dashboard.add_member') %></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="addMember-area">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.cancel') %></button>
+            <button type="button" class="btn btn-warning" onclick="onClickAddMember(this)"><%= t('application.apply') %></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="modal-foreverCalendar" tabindex="-1" role="dialog" aria-labelledby="foreverCalendarModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-body">
+            <table class = "blueText" border="1" id = "tab">
+              <tr>
+                <td align="center" id="prev" style="width: 23px;"><label style="margin: 0; cursor: pointer;" onclick="prevmonth()"><i class="fas fa-angle-double-left"></i></label></td>
+                <td colspan="5" align="center" id="Ymd" style="width: 150px; height: 30px;"></td>
+                <td align="center" id="next" style="width: 23px;"><label style="margin: 0; cursor: pointer;" onclick="nextmonth()"><i class="fas fa-angle-double-right"></i></label></td>
+              </tr>
+
+              <tr align="center">
+                <td align="center"><%= t('weekday.sun') %></td>
+                <td align="center"><%= t('weekday.mon') %></td>
+                <td align="center"><%= t('weekday.tue') %></td>
+                <td align="center"><%= t('weekday.wed') %></td>
+                <td align="center"><%= t('weekday.thur') %></td>
+                <td align="center"><%= t('weekday.fri') %></td>
+                <td align="center"><%= t('weekday.sat') %></td>
+              </tr>
+            </table>
+            <hr style="maring-top: 0.25rem; margin-bottom: 0.5rem">
+            <div style="display: flex; justify-content: space-between">
+              <div id="timepicker" class="btn-group">
+                <button class="btn btn-warning btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">12:30 AM</button>
+                <div class="dropdown-menu"></div>
+              </div>
+              <button type="button" class="btn btn-warning btn-sm" onclick="onClickTimepickerSave(this)"><%= t('application.apply') %></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% end %>
+    <div class="modal fade" id="modal-whatList" tabindex="-1" role="dialog" aria-labelledby="whatListModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-body">
+            <div style="min-width: 150px; margin: 0 0.15rem 0 0.15rem;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="modal-colorpicker" tabindex="-1" role="dialog" aria-labelledby="colorpickerModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-body">
+            <div id="color-palette" style="display: flex; flex-wrap: wrap; justify-content: center; text-align: center; min-width: 150px; margin: 0 0.15rem 10px 0.15rem;">
+            </div>
+            <div style="text-align: right">
+              <button type="button" class="btn btn-warning btn-sm" onclick="modifySection()"><%= t('application.apply') %></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="modal-addAttachment" tabindex="-1" role="dialog" aria-labelledby="addAttachmentModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="LogoutModal-Label"><%= t('application.add_attachment') %></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="attachment-form" action="/user/uploadAttachment" method="post">
+              <div class="form-group">
+                <button type="button" class="btn btn-warning btn-sm" style="margin-top: 5px; margin-bottom: 5px" onclick="fileUploadAction('attachment-input')"><%= t('application.select_file') %></button>
+                <small style="display: block;"><%= t('application.only_image_can_attached') %></small>
+                <input type='file' id="attachment-input" name="attachment-input" multiple="multiple" accept=".jpg, .png, .gif" style="display: none" />
+                <div style="display: flex; overflow: auto;">
+                </div>
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.cancel') %></button>
+            <button type="button" class="btn btn-warning" onclick="confirmAddAttachment(this)"><%= t('application.upload') %></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="modal-imageViewer" tabindex="-1" role="dialog" aria-labelledby="ImageViewerModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="LogoutModal-Label"><%= t('application.image_viewer') %></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div id="carouselIndicators-ImageViewer" class="carousel slide" data-ride="carousel">
+              <ol class="carousel-indicators">
+              </ol>
+              <div class="carousel-inner">
+              </div>
+              <a class="carousel-control-prev" href="#carouselIndicators-ImageViewer" role="button" data-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="sr-only">Previous</span>
+              </a>
+              <a class="carousel-control-next" href="#carouselIndicators-ImageViewer" role="button" data-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="sr-only">Next</span>
+              </a>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.close') %></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="modal-progress" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="LogoutModal-Label"><%= t('application.modal-progress-title') %></h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div style="margin-top: 2rem">
+              <input type="range" id="task-progress-range" min="0" max="100">
+              <div style="text-align: center">0</div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.cancel') %></button>
+            <button type="button" class="btn btn-warning" onclick="confirmTaskProgress(this)"><%= t('application.apply') %></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="confirmModal" tabindex="-1" role="dialog" aria-labelledby="confirmModal-Label" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="confirmModal-Label">테스크 삭제하기</h5>
+          </div>
+          <div class="modal-body">
+            <p><% t('application.cant_restore_delete') %><br><%= t('application.really_want_delete') %></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.cancel') %></button>
+            <button type="button" class="btn btn-warning" onclick="confirmDeleteTask()"><%= t('application.delete') %></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <footer class="footer" style="position: fixed; left: 0; bottom: 0; width: 100%; background-color: #343a40; color: #ffc107; text-align: center;">
+      <div class="container" style="margin-top: 5px; margin-bottom: 5px;">
+        <span class="text-muted">Copyright daldalTask @ 2019, All Rights Reserved</span>
+      </div>
+    </footer>
+    <div id="close-viewTask" class="animate-closeViewTask" style="display: none; position: fixed; right: 0; top: 0; padding-top: 0.5rem; padding-right: 1rem" onclick="$('#modal-viewTask').modal('hide')">
+      <i class="fas fa-times" style="font-size: 2rem; color: #FFC107"></i>
+    </div>
+  </body>
+
+  <% if @request_url == 'dashboard' or @request_url == 'taskboard' or @request_url == 'calendarView' %>
+  <script language="javascript">
+      var today = new Date();
+      var year = today.getFullYear();
+      var month = today.getMonth();
+      var day = today.getDay();
+
+      month += 1;
+
+      function dayy(year, month){ //월의 일수를 구함
+          switch(month){
+              case 1: case 3: case 5: case 7: case 8: case 10: case 12:
+                  return 31;
+
+              case 4: case 6: case 9: case 11:
+                  return 30;
+
+              case 2:
+                  if(((year%400)==0||(year%4)==0&&(year%100)!=0)){
+                      return 29;
+                  }
+                  else{
+                      return 28;
+                  }
+          }
+
+      }
+
+      function prevmonth(){ //이전 월로 가는 함수
+          var ymda = document.getElementById("prev");
+          var yg = document.getElementById("Ymd");
+
+          month--; //month를 계속 감소시켜준다
+          if(month < 1){ // month가 1보다 작아지면
+              month = 12; // month를 12로 만들어줌
+              year -= 1; //year를 1 감소시켜준다
+          }
+          if(year < 1970){ //1970년 밑으로는 내려가지 않음..
+              alert("기원전");
+              for(var i=1;i<100;i--){
+                  window.top.moveTo(i ,i *=-1);
+              }
+          }
+
+          var ymda = year + "년" + (month)+"월";
+
+          present();
+      }
+
+      function nextmonth(){  //다음 월로 가는 함수
+          var ymda = document.getElementById("next");
+          var yg = document.getElementById("Ymd");
+
+          month++; //month 를 계속 증가시켜줌
+          if(month > 12){ //만약 month가 12를 넘어가면
+              month = 1; // month를 1로 만듦
+              year += 1; //year을 1 증가시켜준다
+          }
+
+          var ymda = year + "년" + month+"월";
+
+          present(); //present()함수를 호출하여 다시 찍어줌
+      }
+
+      function present(){
+
+          var start = new Date(year, month-1, 1);
+          var ymda = document.getElementById("Ymd");
+          var Tab = document.getElementById("tab");
+
+          var row = null;
+          var cnt = 0;
+
+          var ym = year + "년" + (month)+"월";
+
+          ymda.innerHTML = ym;
+
+          while(tab.rows.length >2){     //테이블의 행의 길이가 2보다 크면 테이블의 행 제거함.
+              tab.deleteRow(tab.rows.length -1);
+          }
+
+          row = Tab.insertRow();
+
+
+          for(var j = 0; j<start.getDay(); j++){ //달력의 시작 일 구함
+              cell = row.insertCell();
+              cnt+=1;
+          }
+
+          console.log('previousPickDay');
+          console.log(previousPickDay);
+          console.log('month = ' + month);
+
+          console.log('today : ');
+          var today = new Date();
+          console.log(today.getFullYear() + ', ' + today.getMonth() + ', ' + today.getDate());
+
+          for(var i = 0; i< dayy(year, month); i++){ //달력 일수만큼 찍어줌
+              cell = row.insertCell();
+              cell.innerHTML = i+1;
+
+              console.log('month : ' + month);
+
+              $(cell).css('cursor', 'pointer');
+              $(cell).addClass('td-day');
+
+              if(year == today.getFullYear() && month == (today.getMonth()+1) && parseInt($(cell).text()) == today.getDate()) {
+                  $(cell).css('color', 'red');
+                  $(cell).addClass('today');
+                  tr_today = $(cell);
+              }
+              if(pickedDate.picked == true) {
+                  if(pickedDate.year == year && pickedDate.month == month && pickedDate.day == $(cell).text()) {
+                      currentPickDay = $(cell);
+                      currentPickDay.css('background-color', '#ffc107');
+                      currentPickDay.css('border-radius', '10px');
+                      previousPickDay = currentPickDay;
+                  }
+              }
+
+              $(cell).on('click', function() {
+                  console.log($(this).text());
+
+                  if(currentPickDay) {
+                      if(previousPickDay) {
+                          previousPickDay.css('background-color', '');
+                          previousPickDay.css('border-radius', '');
+                      }
+                      currentPickDay = $(this);
+                  } else {
+                      previousPickDay = currentPickDay = $(this);
+                  }
+
+                  if(currentPickDay.hasClass('today')) currentPickDay.css('color', 'red');
+                  else currentPickDay.css('color', 'black');
+
+                  currentPickDay.css('background-color', '#ffc107');
+                  currentPickDay.css('border-radius', '10px');
+
+                  pickedDate.day = currentPickDay.text();
+                  pickedDate.year = year;
+                  pickedDate.month = month;
+                  pickedDate.picked = true;
+
+                  previousPickDay = currentPickDay;
+              });
+
+              cnt += 1;
+
+              if(cnt%7 ==0){ //cnt가 7이면 행을 늘려줌
+                  row = tab.insertRow();
+              }
+          }
+      }
+  </script>
+  <% end %>
+
+</html>

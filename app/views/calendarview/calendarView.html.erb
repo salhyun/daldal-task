@@ -1,0 +1,200 @@
+<style>
+  body {
+    background-color:floralwhite;
+    width: 100%;
+    margin: auto;
+    overflow: hidden;
+  }
+  #calendar {
+    max-width: 900px;
+    margin: 1rem auto;
+  }
+  .fc-sat { color:#0000FF; }     /* 토요일 */
+  .fc-sun { color:#FF0000; }    /* 일요일 */
+
+  .fc-time {
+    color: ghostwhite;
+  }
+  .fc-title {
+    color: ghostwhite;
+  }
+
+  /*.fc-right .fc-prev-button, .fc-right .fc-next-button{*/
+  /*  background-color: #b1d583;*/
+  /*  background-image: none;*/
+  /*}*/
+
+</style>
+
+<script>
+    $(document).ready(function() {
+        $('.content').css('margin-top', $('.navbar')[0].clientHeight);
+
+        resizeCalendar();
+
+        let nowDay = new Date();
+        console.log('nowDay =', getDateString(nowDay));
+
+        let current_locale = 'ko';
+        if(currentI8nLocale == 'ko') {
+            current_locale = 'ko';
+        }
+        else {
+            current_locale = 'en';
+        }
+
+        let calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+            locale: current_locale,
+            plugins: [ 'interaction', 'dayGrid', 'timeGrid' ],
+            now: getDateString(nowDay),//'2019-03-03',
+            editable: true,
+            aspectRatio: aspectRatio(),
+            scrollTime: '00:00',
+            header: {
+                left: '',//'promptResource today prev,next',
+                center: 'title',
+                right: 'today prev,next'//'resourceTimelineDay,resourceTimelineThreeDays,timeGridWeek,dayGridMonth'
+            },
+            customButtons: {
+                promptResource: {
+                    text: '+ room',
+                    click: function() {
+                        var title = prompt('Room name');
+                        if (title) {
+                            calendar.addResource({ title: title });
+                        }
+                    }
+                }
+            },
+            defaultView: 'dayGridMonth',
+            views: {
+                resourceTimelineThreeDays: {
+                    type: 'resourceTimeline',
+                    duration: { days: 3 },
+                    buttonText: '3 days'
+                }
+            },
+            resourceLabelText: 'Rooms',
+            // resourceRender: function(arg) {
+            //     var resource = arg.resource;
+            //
+            //     arg.el.addEventListener('click', function() {
+            //         if (confirm('Are you sure you want to delete ' + resource.title + '?')) {
+            //             resource.remove();
+            //         }
+            //     });
+            // },
+            events: [
+                <% @tasks.each do |task| %>
+                  <% if task.dday %>
+                    <% if task.tags.length > 0 %>
+                    { id: '<%= task.id %>', resourceId: '<%= task.section.id %>', start: convertTime('<%= task.created_at %>'), end: convertTime('<%= task.dday %>'), title: '<%= task.title %>', backgroundColor: '<%= task.tags[0].color %>', color: '<%= task.tags[0].color %>', extendedProps: {taskId: '<%= task.id %>', sectionId: '<%= task.section.id %>'}},
+                    <% else %>
+                    { id: '<%= task.id %>', resourceId: '<%= task.section.id %>', start: convertTime('<%= task.created_at %>'), end: convertTime('<%= task.dday %>'), title: '<%= task.title %>', extendedProps: {taskId: '<%= task.id %>', sectionId: '<%= task.section.id %>'}},
+                    <% end %>
+                  <% end %>
+                <% end %>
+
+                // { id: '11', resourceId: '11', start: '2019-03-01T02:00:00', end: '2019-03-03T07:00:00', title: 'event 1', backgroundColor: 'red', color: 'red' },
+                // { id: '22', resourceId: '22', start: '2019-08-07T05:00:00', end: '2019-08-07T22:00:00', title: 'event 2' },
+                // { id: '33', resourceId: '33', start: '2019-08-06', end: '2019-08-08', title: 'event 3' },
+                // { id: '42', resourceId: 'e', start: '2019-08-07T03:00:00', end: '2019-08-07T08:00:00', title: 'event 4' },
+                // { id: '51', resourceId: 'f', start: '2019-08-07T00:30:00', end: '2019-08-07T02:30:00', title: 'event 5' }
+            ],
+            eventClick: function(info) {
+                console.log('info title =' + info.event.title);
+                console.log('info taskId =' + info.event.id);
+                console.log('info = ', info);
+
+                let buttonId = 'button-task-' + info.event.extendedProps.taskId;
+                $('#trigger-buttons').empty();
+                $('#trigger-buttons').append('<button id="' + buttonId + '" type="button" style="display: none" data-toggle="modal" data-kind="open-task" data-sectionid="' + info.event.extendedProps.sectionId +'" data-taskid="' + info.event.extendedProps.taskId + '" data-target="#modal-viewTask">button</button>');
+                $('#' + buttonId).trigger('click');
+            },
+            windowResize: function(view) {
+                console.log(`client width=${document.documentElement.clientWidth}, height=${document.documentElement.clientHeight}`);
+                resizeCalendar();
+                calendar.setOption('aspectRatio', aspectRatio());
+            }
+        });
+        calendar.render();
+
+        $('.fc-today-button').attr('class', 'fc-today-button btn btn-warning');
+        $('.fc-next-button').attr('class', 'fc-next-button btn btn-warning');
+        $('.fc-next-button').children('span').first().attr('class', 'fa fa-chevron-right');
+        $('.fc-prev-button').attr('class', 'fc-prev-button btn btn-warning');
+        $('.fc-prev-button').children('span').first().attr('class', 'fa fa-chevron-left');
+        $('.fc-prev-button').parent().attr('class', 'btn-group');
+
+        let ee = convertTime('2019-3-3-4-30-PM');
+        console.log('ee =', ee)
+        ee = convertTime('2019-02-01 13:45:57 UTC');
+        console.log('UTC ee =', ee)
+
+        $( window ).on( "orientationchange", function( event ) {
+            console.log('orientationchange');
+        });
+        $( window ).resize( function() {
+            console.log('window resize');
+        });
+
+    });//$(document).ready
+
+    function resizeCalendar() {
+        let clientHeight = document.documentElement.clientHeight;
+        let navbarHeight = $('.navbar')[0].clientHeight;
+        let footerHeight = $('.footer')[0].clientHeight;
+        let calendarHeight = clientHeight - navbarHeight - footerHeight;
+        console.log('calendarHeight =', calendarHeight);
+        $('#calendar').parent().css('overflow', 'auto');
+        $('#calendar').parent().css('height', calendarHeight);
+    }
+    function aspectRatio() {
+        if(document.documentElement.clientHeight > document.documentElement.clientWidth) {
+            return 0.75;
+        }
+        return 1.8;
+    }
+
+    function getDateString(date) {
+        let dd = date.getDate();
+        let mm = date.getMonth()+1;//january is 0
+        let yyyy = date.getFullYear();
+
+        if(dd<10) dd = '0'+dd;
+        if(mm<10) mm = '0'+mm;
+        let result = yyyy + '-' + mm + '-' + dd;
+        return result;
+    }
+    function convertTime(t) {
+        let result;
+        if(t.includes('UTC')) {
+            result = t.replace(/ UTC/g , '');
+            result = result.replace(/ /g , 'T');
+        } else {
+            let ar = t.split('-');
+            let year = '0000' + ar[0];
+            let month = '00' + ar[1];
+            let day = '00' + ar[2];
+            let hour = parseInt(ar[3]);
+            if(ar[5] == 'PM')
+                hour += 12;
+            hour = '00' + hour;
+            let min = '00' + ar[4];
+            result = year.slice(-4) + '-' + month.slice(-2) + '-' + day.slice(-2) + 'T' + hour.slice(-2) + ':' + min.slice(-2) + ':' + '00';
+        }
+        return result;
+    }
+    function onClickPrev() {
+        console.log('click prev');
+        $('#calendar').calendar('prev');
+    }
+</script>
+
+<div class="content">
+  <div class="rounded" style="padding: 1rem; background-color: floralwhite;">
+    <div id='calendar'></div>
+  </div>
+  <div id="trigger-buttons">
+  </div>
+</div>

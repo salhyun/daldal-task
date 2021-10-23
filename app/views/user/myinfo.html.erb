@@ -1,0 +1,421 @@
+<style>
+	body {
+		background-color:floralwhite;
+		width: 100%;
+		margin: auto
+	}
+</style>
+
+<script type="text/javascript">
+  allAttachmentCount = 0;
+
+	$(document).ready(function() {
+		$('.content').css('margin-top', $('.navbar')[0].clientHeight + 100);
+
+      $('#confirmModal').on('show.bs.modal', function (event) {
+          let button = $(event.relatedTarget);
+          let kind = button.data('kind');
+          $(this).find('.modal-body').empty();
+          if(kind == 'withdrawAccount') {
+              $(this).find('#confirmModal-Label').text('<%= t('user.withdraw_account') %>');
+              let userId = button.data('userid');
+              console.log('userId =', userId);
+              $(this).find('.modal-body').append("<p><%= t('user.all_data_gone_sincerely_withdraw') %></p>");
+              let confirmButton = $(this).find('.modal-footer').children().last();
+              confirmButton.attr('class', 'btn btn-danger');
+              confirmButton.attr('onclick', 'confirmWithdrawAccount(this,' + userId + ')');
+          }
+      });
+	});
+  $(function() {
+      $("#avatar-image").on('change', function(){
+          readURL(this);
+      });
+  });
+
+	function confirmChangeAvatar(obj) {
+    const fileName = ($('#avatar-image'))[0].files[0].name;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        $(obj).attr('disabled', true);
+        $(obj).prepend("<span class=\"spinner-border spinner-border-sm\" role=\"status\" aria-hidden=\"true\"></span>");
+        resizeImage(e.target.result, 200, fileName, (origin, blob) => {
+            var user = firebase.auth().currentUser;
+            if(user) {
+                firebase.storage().ref('images/' + user.uid + '/').child('thumb_avatar').put(blob).then(thumbSnapshot => {
+                    console.log('Uploaded a thumb blob or file!');
+                    thumbSnapshot.ref.getDownloadURL().then(downloadURL => {
+                        console.log('File available at ' + downloadURL);
+                        updateAvatarUrl(downloadURL);
+                    })
+                    firebase.storage().ref('images/' + user.uid + '/').child('avatar').put(origin).then(snapShot => {
+                        console.log('Uploaded a blob or file!');
+                        if(obj !== undefined) {
+                            $(obj).children('span').remove();
+                            $(obj).attr('disabled', false);
+                            $('#changeAvatar').modal('toggle');
+                        }
+                    })
+                })
+            } else {
+                console.error('로그인 되어 있지 않습니다.');
+            }
+        });
+    }
+    reader.readAsDataURL(($('#avatar-image'))[0].files[0]);
+	}
+  function updateAvatarUrl(url) {
+      $.ajax({
+          url: '/user/updateAvatarUrl',
+          type: 'post',
+          data: {
+              userId: <%= session[:user]['id'] %>,
+              avatarUrl: url
+          },
+          success: function(data) {
+              if(data.result == true) {
+                  $('#avatar-user').attr('src', data.avatar);
+                  console.log('avatar updated successfully');
+              } else {
+                  console.log('result =', data.result);
+              }
+          },
+          error: function(request, status, error) {
+              console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+          }
+      });
+  }
+	function confirmChangeName() {
+		$.ajax({
+			url: '/user/changeName',
+			type: 'post',
+			data: {
+        userId: <%= session[:user]['id'] %>,
+				newName: $('#newName').val()
+			},
+			success: function(data) {
+				console.log("success");
+				console.log(data);
+
+				if(data.result == true) {
+            var oldName = $('#userName').text();
+            $('#userName').text(data.name);
+
+            var welcomeUser = $('#welcome-user').text();
+            welcomeUser = welcomeUser.replace(oldName, data.name);
+            $('#welcome-user').text(welcomeUser);
+
+            $('#changeName').modal('toggle');
+        } else {
+				    console.log('result =', data.result);
+        }
+			},
+			error: function(request, status, error) {
+				console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+			}
+		});
+	}
+
+	function confirmChangePassword() {
+	    var oldPassword = $('#old-password').val();
+	    var newPassword = $('#new-password').val();
+	    var confirmPassword = $('#new-password').next().val();
+
+	    console.log(oldPassword);
+      console.log(newPassword);
+      console.log(confirmPassword);
+
+      var codeSHA = CryptoJS.SHA256(oldPassword).toString();
+      console.log(codeSHA);
+      if(codeSHA == "<%= session[:user]['password'] %>") {
+
+          if(newPassword == confirmPassword) {
+              $.ajax({
+                  url: '/user/changePassword',
+                  type: 'post',
+                  data: {
+                      userId: <%= session[:user]['id'] %>,
+                      newPassword: newPassword
+                  },
+                  success: function(data) {
+                      console.log("success");
+                      console.log(data);
+
+                      if(data.result == true) {
+                          $('#changePassword').modal('toggle');
+                          location.reload();
+                      } else {
+
+                      }
+                  },
+                  error: function(request, status, error) {
+                      console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                  }
+              });
+          } else {
+              alert('<%= t('myinfo.newpassword_not_match') %>');
+          }
+      } else {
+          alert('<%= t('myinfo.wrong_password') %>');
+      }
+  }
+  function checkFirebaseUser() {
+      let currentUser = firebase.auth().currentUser;
+      if(currentUser) {
+          if(currentUser.email == '<%= session[:user]['account'] %>') {
+              return {exist: true, user: currentUser};
+          } else {
+              return {exist: false, message: '<%= t('user.storage_user_different') %>'};
+          }
+      }
+      return {exist: false, message: '<%= t('user.no_storage_user') %>'};
+  }
+  function confirmWithdrawAccount(obj, userId) {
+      console.log('confirmWithdrawAccount userId =', userId);
+      let result = checkFirebaseUser();
+      if(result.exist) {
+          result.user.delete().then(function() {
+              allAttachmentCount = 1;
+              $(obj).attr('disabled', true);
+              $(obj).text(' ' + $(obj).text());
+              $(obj).prepend('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+              $(obj).prev().attr('disabled', true);
+              //먼저 유저가 생성한 테스크 삭제하기전 테스크에 있는 attachments 를 모두 제거한다.
+              console.log('%c before getAllAttachmentsFromUser', 'color: #EB1460');
+              getAllAttachmentsFromUser(userId, attachment => {
+                  // console.log(`attachment name=${attachment.name}, taskId=${attachment.taskId}`);
+
+                  // let ref = firebase.storage().ref('images/task/' + attachment.taskId + '/').child('thumb_' + attachment.name);
+                  // let snapshot = ref.getDownloadURL();
+                  // console.log('attachment snapshot =', snapshot);
+
+                  firebase.storage().ref('images/task/' + attachment.taskId + '/').child('thumb_' + attachment.name).delete().then(() => {
+                      console.log('thumb_' + attachment + ' deleted successfully');
+                      decreaseAttachmentCount(1);
+                  });
+                  firebase.storage().ref('images/task/' + attachment.taskId + '/').child(attachment.name).delete().then(() => {
+                      console.log(attachment + ' deleted successfully');
+                      decreaseAttachmentCount(1);
+                  })
+              });
+              console.log('%c after getAllAttachmentsFromUser', 'color: #EB1460');
+
+              $.ajax({
+                  url: '/user/withdrawAccount',
+                  type: 'post',
+                  data: {
+                      userId: userId
+                  },
+                  success: function(data) {
+                      console.log(data);
+                      if(data.result == true) {
+                          console.log('result message =', data.message);
+                          decreaseAttachmentCount(1);
+                      } else {
+                          alert(data.message);
+                      }
+                  },
+                  error: function(request, status, error) {
+                      console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                  }
+              });
+          }).catch(function(error) {
+              alert(error);
+          });
+      } else {
+          alert(result.message);
+      }
+  }
+  function gotoRoot() {
+      window.location.href = '/';
+  }
+
+	function readURL(input) {
+		if (input.files && input.files[0]) {
+			var reader = new FileReader();
+			reader.onload = function (e) {
+			    // var blob = dataURItoBlob(e.target.result);
+			    // firebase.storage().ref('images/').child('eee').put(blob).then(snapshot => {
+          //     console.log('Uploaded a blob or file!');
+          // })
+          $('#blah').attr('src', e.target.result);
+          $('#blah').css('display', 'block');
+			}
+			console.log('read avatar');
+			console.log(input.files[0]);
+			reader.readAsDataURL(input.files[0]);
+		}
+	}
+	function sendTestEmail() {
+      $.ajax({
+          url: '/user/sendTestMail',
+          type: 'post',
+          data: {
+              email: 'salhyun@nate.com'
+          },
+          success: function(data) {
+              console.log(data);
+          },
+          error: function(request, status, error) {
+              console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+          }
+      });
+      console.log('End of sendTestEmail');
+  }
+  function decreaseAttachmentCount(n) {
+	    if(allAttachmentCount > 0) {
+	        allAttachmentCount -= n;
+	        if(allAttachmentCount <= 0) {
+              let modalBody = $('#confirmModal').find('.modal-body');
+              modalBody.empty();
+              modalBody.append('<p><%= t('user.withdraw_account_successfully') %><br><%= t('goodbye') %></p>');
+              let modalFooter = $('#confirmModal').find('.modal-footer');
+              modalFooter.empty();
+              modalFooter.append("<button type='button' class='btn btn-secondary' onclick='gotoRoot()'><%= t('application.close') %></button>");
+          }
+      }
+  }
+  function getAllAttachmentsFromUser(userId, deleteAttachment) {
+      $.ajax({
+          url: '/user/getAllAttachmentsFromUser',
+          type: 'post',
+          data: {
+              userId: userId
+          },
+          async: false,
+          success: function(data) {
+              console.log(data);
+              if(data.result == true) {
+                  if(data.attachments.length > 0) {//Attachment 있을 경우 firebase에서 삭제해야 함
+                      console.log('before attachments loop length =', data.attachments.length);
+                      allAttachmentCount += data.attachments.length*2;//thumb & original 2개이기 때문에 2배로 해서 카운트 해준다.
+                      data.attachments.forEach(attachment => {
+                          console.log('%c loop attachment', 'color: #FF9800');
+                          deleteAttachment(attachment);
+                      });
+                      console.log('after attachments loop');
+                  } else {
+                      console.log('%c There are no attachments', 'color: #FF9800');
+                  }
+              } else {
+              }
+          },
+          error: function(request, status, error) {
+              console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+          }
+      });
+  }
+</script>
+
+<div class="content">
+  <div class="shadow-sm p-3 mb-5 bg-white rounded" style="max-width: 600px; height:auto; text-align: center; margin: auto;">
+    <div style="width: auto; text-align: left;">
+      <div style="display: flex">
+        <h4><%= session[:user]['account'] %></h4>
+        <h4 style="margin-left: auto"><%= t('myinfo.your_tier') %></h4><!--margin-left: auto로 오른쪽끝으로 보내버린다 flex에서-->
+      </div>
+      <hr style="margin: auto">
+      <div style="display: flex; flex-direction: row; justify-content: space-between; margin-top: 20px">
+        <div style="display: flex; align-items:flex-start;">
+          <div style="display: flex; flex-direction: column; align-items: center">
+            <% if session[:user]['avatar'].nil? %>
+              <img id="avatar-user" style="width: 100px; height: 100px; border: 3px solid gold;border-radius: 7px;" src="/defaultprofile.png" />
+            <% else %>
+              <img id="avatar-user" style="width: 100px; height: 100px; border: 3px solid gold;border-radius: 7px;-moz-border-radius: 7px;-khtml-border-radius: 7px;-webkit-border-radius: 7px;" src=<%= session[:user]['avatar'] %> />
+            <% end %>
+            <a data-toggle="modal" href="#changeAvatar"><%= t('myinfo.change_avatar') %></a>
+          </div>
+          <div style="display: flex; flex-direction: column; margin-left: 1.5rem">
+            <div>
+              <h5 id="userName" style="display: inline-block"><%= session[:user]['name'] %></h5>
+              <a data-toggle="modal" href="#changeName"><%= t('myinfo.change_nickname') %></a>
+            </div>
+            <a data-toggle="modal" href="#changePassword"><%= t('myinfo.change_password') %></a>
+<!--            <button type="button" class="btn btn-warning" onclick="sendTestEmail()">이메일테스트_salhyun_at_naver.com</button>-->
+<!--            <button type="button" class="btn btn-warning" onclick="withdrawUser(this, 16)">withdrawUser 16</button>-->
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; justify-content: flex-end">
+          <button type="button" class="btn btn-danger" data-toggle="modal" data-kind="withdrawAccount" data-userid="<%= session[:user]['id'] %>" data-target="#confirmModal"><%= t('user.withdraw_account') %></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="changeAvatar" tabindex="-1" role="dialog" aria-labelledby="changeAvatarModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="LogoutModal-Label"><%= t('myinfo.change_profile_avatar') %></h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<form id="avatar-form" action="/user/uploadAvatar" method="post">
+					<div class="form-group">
+            <button type="button" class="btn btn-warning btn-sm" style="margin-top: 5px; margin-bottom: 5px" onclick="fileUploadAction('avatar-image')"><%= t('myinfo.upload_file') %></button>
+            <input type='file' id="avatar-image" name="avatar-image" accept=".jpg, .png, .gif" style="display: none" />
+            <img id="blah" src="#" alt="your image" style="display: none; width: 100px; height: 100px; border-radius: 10%; margin-top: 20px" />
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.cancel') %></button>
+				<button type="button" class="btn btn-warning" onclick="confirmChangeAvatar(this)">
+          <%= t('myinfo.upload') %>
+        </button>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="modal fade" id="changeName" tabindex="-1" role="dialog" aria-labelledby="changeNameModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h5 class="modal-title" id="LogoutModal-Label"><%= t('myinfo.change_nickname') %></h5>
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+			</div>
+			<div class="modal-body">
+				<div style="margin-bottom: 10px"><%= t('myinfo.current_nickname') %>: <%= session[:user]['name'] %></div>
+				<form>
+					<div class="form-group">
+					<input type="text" class="form-control" id="newName" placeholder="<%= t('myinfo.new_nickname') %>"/>
+					</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.cancel') %></button>
+				<button type="button" class="btn btn-warning" onclick="confirmChangeName()"><%= t('application.apply') %></button>
+			</div>
+		</div>
+	</div>
+</div>
+<div class="modal fade" id="changePassword" tabindex="-1" role="dialog" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="LogoutModal-Label"><%= t('myinfo.change_password') %></h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form>
+          <div class="form-group">
+            <input type="password" class="form-control" id="old-password" placeholder="<%= t('myinfo.current_password') %>"/>
+            <input style="margin-top: 10px;" type="password" class="form-control" id="new-password" placeholder="<%= t('myinfo.new_password') %>"/>
+            <input style="margin-top: 10px;" type="password" class="form-control" placeholder="<%= t('myinfo.confirm_new_password') %>"/>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal"><%= t('application.cancel') %></button>
+        <button type="button" class="btn btn-warning" onclick="confirmChangePassword()"><%= t('application.apply') %></button>
+      </div>
+    </div>
+  </div>
+</div>

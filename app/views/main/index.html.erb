@@ -1,0 +1,104 @@
+<style>
+  body {
+    background-color:floralwhite;
+    width: 100%;
+    margin: auto
+  }
+  .promo {
+    margin: auto;
+    <% if @mobileDevice %>
+    <% else %>
+      width: 70%;
+    <% end %>
+  }
+  .feature {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    <% if @mobileDevice %>
+    <% else %>
+      width: 290px;
+    <% end %>
+    margin: 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 0.4rem;
+  }
+  .feature-image {
+    margin-bottom: 2rem;
+  }
+</style>
+
+<script>
+    $(document).ready(function() {
+        $('.content').css('margin-top', $('.navbar')[0].clientHeight + 100);
+        fitJumbotronImage();
+    });
+
+    function fitJumbotronImage() {
+        let jumbotronSize = {width: $('#jumbotronImage').get(0).naturalWidth, height: $('#jumbotronImage').get(0).naturalHeight};
+        let jumbotronRatio = jumbotronSize.height/jumbotronSize.width;
+        let parentWidth = $('#jumbotronImage').parent().width();
+        if(jumbotronSize.width > parentWidth) {
+            $('#jumbotronImage').attr('width', parentWidth);
+            $('#jumbotronImage').attr('height', $('#jumbotronImage').attr('width')*jumbotronRatio);
+        } else {
+            $('#jumbotronImage').attr('width', jumbotronSize.width);
+            $('#jumbotronImage').attr('height', jumbotronSize.height);
+        }
+    }
+
+</script>
+<div class="content">
+  <div class="shadow-sm p-3 mb-5 bg-white rounded promo">
+    <div style="width: auto; margin: auto;">
+      <div style="margin-top: 2rem; display: flex; justify-content: center;">
+        <img id="jumbotronImage" src="/jumbotronImage.png" style="border-radius: 0.4rem"/>
+      </div>
+      <div style="margin-top: 1rem; margin-bottom: 2rem">
+        <h1 style="text-align: center"><%= t('index.task_management_with_sweet') %></h1>
+        <h4 style="text-align: center"><%= t('index.do_more_work_more_reasonably') %></h4>
+      </div>
+      <% unless session[:logined] %>
+      <div style="text-align: center; margin-bottom: 2rem">
+        <button type="button" class="btn btn-warning btn-lg" onclick="window.location='user/new'"><%= t('index.start_its_free') %></button>
+      </div>
+      <% end %>
+    </div>
+  </div>
+  <div class="shadow-sm p-3 mb-5 bg-white rounded promo">
+    <div style="display: flex; flex-wrap: wrap; justify-content: space-evenly">
+      <div class="feature">
+        <img class="feature-image" width="50%" src="/easytouse.jpg"/>
+        <h5><%= t('index.easy_to_use_title') %></h5>
+        <div><%= t('index.easy_to_use_desc') %></div>
+      </div>
+      <div class="feature">
+        <img class="feature-image" width="50%" src="/ability.png"/>
+        <h5><%= t('index.provide_necessary_ability') %></h5>
+        <div><%= t('index.provide_necessary_ability_desc') %></div>
+      </div>
+      <div class="feature">
+        <img class="feature-image" width="50%" src="/kanban.png"/>
+        <h5><%= t('index.its_kanban') %></h5>
+        <div><%= t('index.its_kanban_desc') %></div>
+      </div>
+      <div class="feature">
+        <img class="feature-image" width="50%" src="/collaboration.png"/>
+        <h5><%= t('index.collaboration_tool') %></h5>
+        <div><%= t('index.collaboration_tool_desc') %></div>
+      </div>
+      <div class="feature">
+        <img class="feature-image" width="50%" src="/web.png"/>
+        <h5><%= t('index.web_based') %></h5>
+        <div><%= t('index.web_based_desc') %></div>
+      </div>
+      <div class="feature">
+        <img class="feature-image" width="50%" src="/mobile.png"/>
+        <h5><%= t('index.no_problem_mobile') %></h5>
+        <div><%= t('index.no_problem_mobile_desc') %></div>
+      </div>
+    </div>
+  </div>
+</div>

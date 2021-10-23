@@ -1,0 +1,397 @@
+<style>
+  body {
+    background-color:floralwhite;
+    width: 100%;
+    margin: auto;
+    overflow: hidden;
+  }
+  .unsortable {
+    text-align: center; cursor: pointer;
+    padding: 5px;
+  }
+  .unsortable > i {
+    color: #6c757d;
+    transition: color 0.25s ease-in-out;
+  }
+  .unsortable > i:hover {
+    color: #5a6268;
+  }
+</style>
+
+<script>
+    $(document).ready(function() {
+        $('.content').css('margin-top', $('.navbar')[0].clientHeight);
+        console.log(pickedDate);
+
+        <% if @editor and !@mobileDevice %>
+        $('.section-bar').hover(
+          function () {
+              $(this).children('.section-menu').first().removeClass('fade-out');
+              $(this).children('.section-menu').first().addClass('fade-in');
+          },
+          function () {
+              $(this).children('.section-menu').first().removeClass('fade-in');
+              $(this).children('.section-menu').first().addClass('fade-out');
+          }
+        );
+        <% end %>
+
+        <% if @mobileDevice %>
+        let documentWidth = document.documentElement.clientWidth;
+        $('.section-content').css('flex-basis', documentWidth);
+        $('#add-section').css('flex-basis', documentWidth);
+        <% end %>
+
+        fitClientHeight($('#section-area'));
+    });//$(document).ready
+
+    function insertSortable(section, index, array) {
+        $(section).sortable({
+            // items: "div:not(.unsortable)",
+            items: "> .task",
+            connectWith: exceptionIndex(section, array),
+            start: function(event, ui) {
+                setUnsortableVisibility('none');
+                console.log('start event in ' + $(this).attr('id'));
+            },
+            stop: function(event, ui) {
+                setUnsortableVisibility('block');
+            },
+            update: function(event, ui) {
+                console.log('update event in '  + $(this).attr('id'));
+                var orders = new Array();
+                $(this).children('.task').each(function () {
+                    console.log('order taskId = ' + $(this).attr('id'));
+                    orders.push( parseInt($(this).attr('id').split('-')[1]));
+                });
+                console.log('%c' + orders, 'background: black; color: green');
+
+                enableSectionSortable(false);
+                jQuery.ajax({
+                    url: '/taskboard/orderTask',
+                    type: 'post',
+                    data: {
+                        sectionId: $(this).attr('id').split('-')[1],
+                        orders: orders
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        enableSectionSortable(true)
+                        if(data.result == true) {
+                        } else {
+                        }
+                    },
+                    error: function(request, status, error) {
+                        console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                    }
+                });
+            },
+            receive: function(event, ui) {
+                if($(this).children().length == 2) {
+                    var addTask = $(this).children('.unsortable');
+                    addTask.clone().appendTo($(this));
+                    addTask.remove();
+                }
+            }
+        }).disableSelection();
+    }
+
+    function exceptionIndex(index, ar) {
+        result = new Array();
+        for(i of ar) {
+            if(index != i) result.push(i);
+        }
+        return result;
+    }
+    function setUnsortableVisibility(option) {
+        $('.unsortable').each(function() {
+            $(this).css('display', option);
+        });
+    }
+    function buildTask(parent) {
+        var header = $("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin: 5px; padding: 5px 10px 5px 10px;'>");
+        header.append("<h5>로고 디자인</h5>");
+        header.append("<div class='name-tag'>철수</div>");
+        parent.append(header);
+
+        var content = $("<div style='display: flex; align-items: flex-end; margin: 5px; padding: 5px 10px 5px 10px;'>");
+        content.append("<div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class=\"fas fa-calendar-alt\"></i>1월12일</div>");
+        content.append("<div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class=\"far fa-comment\"></i>3</div>");
+        content.append("<div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class=\"fas fa-list-ul\"></i>2/3</div>");
+        content.append("<div style='font-size: 0.8rem; color: ghostwhite; background-color: #d81616; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'>마태그</div>");
+        parent.append(content);
+
+        parent.append("<div class=\"progress\" style=\"height: 2px;\"><div class=\"progress-bar bg-danger\" role=\"progressbar\" style=\"width: 0;\" aria-valuenow=\"0\" aria-valuemin=\"0\" aria-valuemax=\"100\"></div></div>");
+    }
+    function addNewTask(section, task) {
+        var parent = $("<div class=\"task\" id='task-" + task.id + "' data-toggle=\"modal\" data-kind=\"open-task\" data-sectionid=\"12\" data-taskid=\"" + task.id + "\" data-target=\"#modal-viewTask\">");
+        var header = $("<div style='display: flex; justify-content: space-between; align-items: flex-start; margin: 5px; padding: 5px 10px 5px 10px;'>");
+        header.append("<h5>" + task.title + "</h5>");
+        parent.append(header);
+
+        var content = $("<div style='display: flex; align-items: flex-end; margin: 5px; padding: 5px 10px 5px 10px;'>");
+        content.append("<div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class=\"fas fa-calendar-alt\"></i>지정안됨</div>");
+        content.append("<div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class=\"far fa-comment\"></i>0</div>");
+        content.append("<div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class=\"fas fa-list-ul\"></i>0/0</div>");
+        // content.append("<div style='font-size: 0.8rem; color: ghostwhite; background-color: #d81616; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'>마태그</div>");
+        parent.append(content);
+
+        parent.append("<div class=\"progress\" style=\"height: 2px;\"><div class=\"progress-bar bg-danger\" role=\"progressbar\" style=\"width: " + task.progress + "%;\" aria-valuenow=\"" + task.progress + "\" aria-valuemin=\"0\" aria-valuemax=\"100\"></div></div>");
+        section.children('.unsortable').before(parent);
+    }
+    function getSectionOrder(sectionId) {
+        var orders = new Array();
+        $('#section-' + sectionId).children('.task').each(function () {
+            console.log('order taskId = ' + $(this).attr('id'));
+            orders.push( parseInt($(this).attr('id').split('-')[1]));
+        });
+        console.log(orders);
+        return orders;
+    }
+    function enableSectionSortable(sortable) {
+        if(sortable == true) {
+            $(".section").each(function () {
+                $(this).sortable('enable');
+            });
+        } else {
+            $(".section").each(function () {
+                $(this).sortable('disable');
+            });
+        }
+    }
+
+    function createSection(obj) {
+        console.log('createSection');
+        var title = $("input[name='section-title']").val();
+        console.log('title = ' + title + ', color = ' + selectedColor);
+
+        jQuery.ajax({
+            url: '/taskboard/createSection',
+            type: 'post',
+            data: {
+                projectId: <%= @project.id %>,
+                title: title,
+                color: selectedColor
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    var lastSection = buildSectionArea($("#add-section"), data.section);
+
+                    var lastSectionId = '#' + lastSection.attr('id');
+                    console.log('lastSectionId = ' + lastSectionId);
+
+                    var sections = new Array();
+                    $(".section").each(function () {
+                        sections.push('#' + $(this).attr('id'));
+                    });
+                    for(var i=0; i<sections.length; i++) {
+                        if(lastSectionId == sections[i]) {
+                            console.log('%c lastSectionId == section' + sections[i], 'background: black; color:yellow');
+                            insertSortable(sections[i], i, sections);
+                            break;
+                        }
+                    }
+                    $('#modal-colorpicker').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function modifySection(obj, sectionId) {
+        var title = $("input[name='section-title']").val();
+        console.log('title = ' + title + ', color = ' + selectedColor);
+
+        $(obj).attr('disabled', true);
+        jQuery.ajax({
+            url: '/taskboard/modifySection',
+            type: 'post',
+            data: {
+                userId: <%= session[:user]['id'] %>,
+                sectionId: sectionId,
+                title: title,
+                color: selectedColor
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $(obj).attr('disabled', false);
+                    var sectionBar = $('#section-' + sectionId).prev();
+                    sectionBar.css('background-color', data.section.color);
+                    sectionBar.children().first().children().first().text(data.section.title);
+                    $('#modal-colorpicker').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function confirmDeleteSection(sectionId) {
+        jQuery.ajax({
+            url: '/taskboard/deleteSection',
+            type: 'post',
+            data: {
+                sectionId: sectionId
+            },
+            success: function(data) {
+                console.log(data);
+                if(data.result == true) {
+                    $('#section-' + sectionId).parent().remove();
+                    $('#confirmModal').modal('toggle');
+                    $('#modal-colorpicker').modal('toggle');
+                } else {
+                }
+            },
+            error: function(request, status, error) {
+                console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+            }
+        });
+    }
+    function buildSectionArea(button, section) {
+        var root = $("<div style=\"flex-basis: 16rem;\">");
+
+        var sectionBar = $("<div class=\"section-bar\" style=\"display: flex; justify-content: space-between; align-items: baseline; background-color: " + section.color + "; color: ghostwhite;\">");
+        var title = $("<div style=\"padding: 0.5rem 0 0.5rem 0.5rem; min-height: 3.5rem; font-size: 1.5rem;\">");
+        title.append("<div>" + section.title + "</div>");
+        sectionBar.append(title);
+
+        <% if @editor %>
+        var sectionMenu = $("<div class=\"section-menu fade-out\" style=\"padding: 0.5rem 0.5rem 0.5rem 0.5rem; cursor: pointer;\" data-toggle=\"modal\" data-kind=\"section\" data-sectionid=\"" + section.id + "\" data-target=\"#modal-colorpicker\">");
+        sectionMenu.append("<i class=\"fas fa-bars\" style=\"font-size: 1rem\"></i>");
+        sectionBar.append(sectionMenu);
+        <% end %>
+        root.append(sectionBar);
+
+        var sectionArea = $("<div class=\"section\" id=\"section-" + section.id + "\" style=\"display: flex; flex-direction: column; height: 500px; background-color: #fcefd1;\">").append("<div class=\"unsortable\" data-toggle=\"modal\" data-kind=\"create-task\" data-sectionId=\"" + section.id + "\" data-target=\"#modal-viewTask\"><i class=\"fas fa-plus-circle\"></i></div>");
+        root.append(sectionArea);
+
+        button.before(root);
+        return sectionArea;
+    }
+    function onClickNewTask(obj, sectionId) {
+        $(obj).attr('onclick', null);
+        $(obj).empty();
+
+        let taskWidth = $('.task').css('width');
+        console.log('taskWidth =', taskWidth);
+        var inputTitle = $("<input type=\"text\" class=\"form-control form-control-sm\" name=\"new-title\" style='border-radius: 0.3rem; border: 1px solid #80808033; width: " + taskWidth + ";' placeholder=\"제목을 입력하세요\">");
+        inputTitle.keypress(function (e) {
+            if(e.which == 13) {//press enter key
+                $(obj).empty();
+                $(obj).append("<i class='fas fa-plus-circle'></i>");
+                $(obj).attr('onclick', 'onClickNewTask(this, ' + sectionId + ')');
+
+                var title = $(this).val();
+                if(title) {
+                    console.log('title = ' + title);
+
+                    jQuery.ajax({
+                        url: '/taskboard/createTask',
+                        type: 'post',
+                        data: {
+                            userId: <%= session[:user]['id'] %>,
+                            sectionId: sectionId,
+                            title: title,
+                            desc : ''
+                        },
+                        success: function(data) {
+                            $(obj).attr("disabled", false);
+                            console.log(data);
+                            if(data.result == true) {
+                                addNewTask($('#section-' + sectionId), data.task);
+                            } else {
+                            }
+                        },
+                        error: function(request, status, error) {
+                            console.log("code = "+ request.status + " message = " + request.responseText + " error = " + error);
+                        }
+                    });
+                }
+            }
+        }).blur(function () {
+          if($(this).val() == '') {
+            $(obj).empty();
+            $(obj).append("<i class='fas fa-plus-circle'></i>");
+            $(obj).attr('onclick', 'onClickNewTask(this, ' + sectionId + ')');
+          }
+        });
+        setTimeout(function () {
+            inputTitle.focus();
+        }, 200);
+        $(obj).append(inputTitle);
+    }
+</script>
+
+<div class="content">
+  <div id="section-area" style="display: flex; align-items: flex-start; font-size: 1.5rem; overflow: auto; overflow-y: hidden">
+    <% @project.sections.each do |section| %>
+      <div class="section-content" style="flex: 0 0 16rem;">
+        <div class="section-bar" style="display: flex; justify-content: space-between; align-items: baseline; background-color: <%= section.color %>; color: ghostwhite;">
+          <div style="padding: 0.5rem 0 0.5rem 0.5rem; min-height: 3.5rem; font-size: 1.5rem;">
+            <div><%= section.title %></div>
+          </div>
+          <% if @editor %>
+          <div class="section-menu <%= @mobileDevice ? '' : 'fade-out' %>" style="padding: 0.5rem 0.5rem 0.5rem 0.5rem; cursor: pointer;" data-toggle="modal" data-kind="section" data-sectionid="<%= section.id %>" data-target="#modal-colorpicker">
+            <i class="fas fa-bars" style="font-size: 1rem"></i>
+          </div>
+          <% end %>
+        </div>
+        <div class="section" id="section-<%= section.id %>" style="display: flex; flex-direction: column; align-items: center; height: 500px; background-color: #fcefd1; overflow: auto; overflow-x: hidden">
+          <% if section.order %>
+            <% orders = section.order.split('-') %>
+            <% orders.each do |taskId| %>
+              <% task = Task.find(taskId) %>
+              <div class="task" id="task-<%= task.id %>" data-toggle="modal" data-kind="open-task" data-sectionid="<%= section.id %>" data-taskid="<%= task.id %>" data-target="#modal-viewTask">
+                <div style='display: flex; justify-content: space-between; align-items: flex-start; margin: 5px; padding: 5px 10px 5px 10px;'>
+                  <h5><%= task.title %></h5>
+                  <% if task.assigned_workers.count > 0 %>
+                    <div class='name-tag'><%= task.assigned_workers[0].name %></div>
+                  <% else %>
+<!--                  <div class='name-tag'><%#= task.creator.name %></div>-->
+                  <% end %>
+                </div>
+                <div style='display: flex; align-items: flex-end; justify-content: <%= task.tags.count > 0 ? 'space-between' : 'flex-start' %>; margin: 5px; padding: 5px 10px 5px 10px;'>
+                  <% if task.dday %>
+                    <% dday = task.dday.split('-') %>
+                    <div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class="fas fa-calendar-alt"></i><%= dday[1] + '월' + dday[2] + '일'%></div>
+                  <% else %>
+                    <div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class="fas fa-calendar-alt"></i>지정안됨</div>
+                  <% end %>
+                  <div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class="far fa-comment" style="margin-right: 2px;"></i><%= task.comment_count %></div>
+                  <div style='font-size: 0.8rem; color: dimgray; background-color: #e7e5e5; border-radius: 0.3rem; padding: 0 3px 0 3px; margin-right: 5px;'><i class="fas fa-list-ul" style="margin-right: 2px"></i><%= task.checklist_count-task.strikeout_count %>/<%= task.checklist_count %></div>
+                  <% if task.tags.count > 0 %>
+                    <div class='t-tag' style='background-color: <%= task.tags[0].color %>; --tagBackground: white; --borderTop: 9.5px solid transparent; --borderBottom: 9.5px solid transparent; --borderRight: 10px solid <%= task.tags[0].color %>;'><%= task.tags[0].name %></div>
+                  <% end %>
+                </div>
+                <% if task.state == 'completed' %>
+                  <div style="background-color: #00ff0080; border-radius-bottomleft: 0.4rem; border-radius-bottomright: 0.4rem; text-align: center; font-size: 1rem; color: green; font-weight: bold;">
+                    <i class="fas fa-check-circle"></i>
+                    <%= t('application.completed') %>
+                  </div>
+                <% else %>
+                  <div class="progress" style="height: 2px;">
+                    <div class="progress-bar bg-danger" role="progressbar" style="width: <%= task.progress %>%;" aria-valuenow="<%= task.progress %>" aria-valuemin="0" aria-valuemax="100"></div>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          <% end %>
+          <% if @editor %>
+<!--          <div class="unsortable" data-toggle="modal" data-kind="create-task" data-sectionId="<%#= section.id %>" data-target="#modal-viewTask"><i class="fas fa-plus-circle"></i></div>-->
+          <div class="unsortable" onclick="onClickNewTask(this, <%= section.id %>)"><i class="fas fa-plus-circle"></i></div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+    <% if @editor %>
+    <div id="add-section" style="display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 0 0 16rem; margin: 0 5px 0 5px; min-height: 3.5rem; font-size: 2rem; color: #6c757d; cursor: pointer;" data-toggle="modal" data-kind="section" data-sectionid="none" data-target="#modal-colorpicker">
+      <i class="fas fa-plus-circle"></i>
+    </div>
+    <% end %>
+  </div>
+</div>
